@@ -10,4 +10,4 @@ until pg_isready -h "$host" -p 5432; do
 done
 
 echo "$host:5432 - accepting connections"
-exec "$@"  # <--- это ключевой момент!
+exec "$@"

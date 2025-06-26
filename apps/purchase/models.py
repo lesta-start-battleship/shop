@@ -6,8 +6,8 @@ class Purchase(models.Model):
     Покупка: сундука, предмета или акции.
     """
     owner = models.IntegerField()  # UID пользователя
-    item_id = models.IntegerField(null=True, blank=True) # FK на Item (по id)
-    chest_id = models.IntegerField(null=True, blank=True)  # FK на Chest (по id)
+    item_id = models.IntegerField(null=True, blank=True)     # FK на Item (по id)
+    chest_id = models.IntegerField(null=True, blank=True)     # FK на Chest (по id)
     promotion_id = models.IntegerField(null=True, blank=True) # FK на Promotion (по id)
     date = models.DateTimeField(default=timezone.now)
 
