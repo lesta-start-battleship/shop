@@ -4,9 +4,9 @@ from .models import Purchase
 from .apps import PurchaseSerializer
 
 @api_view(["GET"])
-def purchase_list(request):
-    """
-    Таблица покупок для Scoreboard / Инвентаря
-    """
-    purchases = Purchase.objects.all()
+def list_purchases(request):
+    uid = request.query_params.get("user_id")
+    if not uid:
+        return Response({"error": "user_id обязателен"}, status=400)
+    purchases = Purchase.objects.filter(owner=uid).order_by("-date")
     return Response(PurchaseSerializer(purchases, many=True).data)

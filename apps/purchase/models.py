@@ -1,18 +1,21 @@
 from django.db import models
+from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 class Purchase(models.Model):
     """
     Покупка: сундука, предмета или акции.
     """
     owner = models.IntegerField()  # UID пользователя
-    item = models.ForeignKey('apps.product.Item', null=True, blank=True, on_delete=models.SET_NULL)
-    chest = models.ForeignKey('apps.chest.Chest', null=True, blank=True, on_delete=models.SET_NULL)
-    promotion = models.ForeignKey('apps.promotion.Promotion', null=True, blank=True, on_delete=models.SET_NULL)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-created_at']
+    item_id = models.IntegerField(null=True, blank=True)      # FK на Item (по id)
+    chest_id = models.IntegerField(null=True, blank=True)     # FK на Chest (по id)
+    promotion_id = models.IntegerField(null=True, blank=True) # FK на Promotion (по id)
+    date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        target = self.item or self.chest or self.promotion
-        return f"{self.owner} bought {target} at {self.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+        return f"Purchase #{self.id} by UID {self.owner}"
+
+    def clean(self):
+        filled = [self.item_id, self.chest_id, self.promotion_id]
+        if sum(x is not None for x in filled) != 1:
+            raise ValidationError("Ровно одно из полей item_id, chest_id или promotion_id должно быть заполнено")
