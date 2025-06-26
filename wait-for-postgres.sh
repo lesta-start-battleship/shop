@@ -3,11 +3,11 @@
 set -e
 
 host="$1"
-
-until pg_isready -h "$host"; do
-  >&2 echo "Postgres is unavailable - sleeping"
+shift
+until pg_isready -h "$host" -p 5432; do
+  echo "$host:5432 - no response"
   sleep 1
 done
 
->&2 echo "Postgres is up - continuing"
+echo "$host:5432 - accepting connections"
 exec "$@"
