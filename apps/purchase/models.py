@@ -1,7 +1,6 @@
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-
 class Purchase(models.Model):
     """
     Покупка: сундука, предмета или акции.
