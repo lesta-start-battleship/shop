@@ -1,3 +1,21 @@
 from django.db import models
+from django.utils import timezone
+from django.core.exceptions import ValidationError
 
-# Create your models here.
+class Purchase(models.Model):
+    """
+    Покупка: сундука, предмета или акции.
+    """
+    owner = models.IntegerField()  # UID пользователя
+    item_id = models.IntegerField(null=True, blank=True)      # FK на Item (по id)
+    chest_id = models.IntegerField(null=True, blank=True)     # FK на Chest (по id)
+    promotion_id = models.IntegerField(null=True, blank=True) # FK на Promotion (по id)
+    date = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Purchase #{self.id} by UID {self.owner}"
+
+    def clean(self):
+        filled = [self.item_id, self.chest_id, self.promotion_id]
+        if sum(x is not None for x in filled) != 1:
+            raise ValidationError("Ровно одно из полей item_id, chest_id или promotion_id должно быть заполнено")
