@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:15
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - shopnet
+
+  shop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      /wait-for-postgres.sh db python manage.py migrate &&
+      gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/code
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=db
+    networks:
+      - shopnet
+
+volumes:
+  postgres_data:
+
+networks:
+  shopnet:
