@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Purchase
-from .apps import PurchaseSerializer
+from .serializers import PurchaseSerializer
 
 @api_view(["GET"])
 def list_purchases(request):
