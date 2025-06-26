@@ -18,7 +18,7 @@ INSTALLED_APPS = [
 	'django.contrib.sessions',
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
-	'restframework',
+	'rest_framework',
 
 	# Кастомные
 	'apps.product.apps.ProductConfig',
