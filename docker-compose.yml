@@ -14,7 +14,9 @@ services:
       context: .
       dockerfile: Dockerfile
     command: >
-      /wait-for-postgres.sh db python manage.py migrate &&
+      /wait-for-postgres.sh db &&
+      sleep 10 &&
+      python manage.py migrate &&
       gunicorn config.wsgi:application --bind 0.0.0.0:8000
     ports:
       - "8000:8000"
@@ -22,10 +24,37 @@ services:
       - .:/code
     depends_on:
       - db
+      - kafka
     env_file:
       - .env
     environment:
       - POSTGRES_HOST=db
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_PURCHASE_TOPIC=purchase-events
+    networks:
+      - shopnet
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - shopnet
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - shopnet
 
