@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+
 from kafka import send_chest_promo_purchase_event
 
 class Purchase(models.Model):
