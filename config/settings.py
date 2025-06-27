@@ -18,13 +18,14 @@ INSTALLED_APPS = [
 	'django.contrib.sessions',
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
-	'rest_framework',
+	
 
 	# Кастомные
 	'apps.product.apps.ProductConfig',
 	'apps.promotion.apps.PromotionConfig',
 	'apps.chest.apps.ChestConfig',
 	'apps.purchase.apps.PurchaseConfig',
+ 	'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -121,3 +122,13 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ]
+}
