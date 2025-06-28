@@ -1,3 +1,4 @@
+from datetime import timedelta
 from pathlib import Path
 import environ
 
@@ -8,7 +9,7 @@ environ.Env.read_env(BASE_DIR / ".env")
 
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env('DEBUG')
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost'])
 
 # Приложения
 INSTALLED_APPS = [
@@ -79,10 +80,25 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-
-
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+	'DEFAULT_AUTHENTICATION_CLASSES': [
+		'config.authentication.AuthServiceAuthentication',
+	],
+	'DEFAULT_PERMISSION_CLASSES': [
+		'rest_framework.permissions.IsAuthenticated',
+	],
+	'DEFAULT_THROTTLE_RATES': {
+		'anon': '50/min',
+		'user': '50/min'
+	}
+}
+
+CACHES = {
+	"default": {
+		"BACKEND": "django_redis.cache.RedisCache",
+		"LOCATION": "redis://redis:6379/1",
+		"OPTIONS": {
+			"CLIENT_CLASS": "django_redis.client.DefaultClient",
+		}
+	}
 }
