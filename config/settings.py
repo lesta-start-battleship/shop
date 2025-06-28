@@ -10,6 +10,8 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env('DEBUG')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost'])
 
+INV_SERVICE_URL = env('INVENTORY_SERVICE_URL')
+
 # Приложения
 INSTALLED_APPS = [
 	'django.contrib.admin',
@@ -26,6 +28,7 @@ INSTALLED_APPS = [
 	'apps.chest.apps.ChestConfig',
 	'apps.purchase.apps.PurchaseConfig',
  	'rest_framework',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
