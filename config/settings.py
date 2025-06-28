@@ -1,6 +1,6 @@
 from datetime import timedelta
 from pathlib import Path
-import environ
+import environ, sys
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -19,13 +19,14 @@ INSTALLED_APPS = [
 	'django.contrib.sessions',
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
-	'rest_framework',
+
 
 	# Кастомные
 	'apps.product.apps.ProductConfig',
 	'apps.promotion.apps.PromotionConfig',
 	'apps.chest.apps.ChestConfig',
 	'apps.purchase.apps.PurchaseConfig',
+ 	'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -68,6 +69,49 @@ DATABASES = {
 		'PORT': env('POSTGRES_PORT', default='5432'),
 	}
 }
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] {levelname} [{name}] {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname}: {message}',
+            'style': '{',
+        },
+    },
+
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,
+            'formatter': 'verbose',
+        },
+    },
+
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG' if DEBUG else 'INFO',
+    },
+
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'apps.kafka': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
