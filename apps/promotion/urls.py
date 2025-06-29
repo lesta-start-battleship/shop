@@ -1,7 +1,8 @@
 from django.urls import path, include
-from apps.promotion.views import PromotionViewSet
+import views
+from rest_framework.routers import DefaultRouter
 
+router = DefaultRouter()
+router.register(r'promotions', views.PromotionViewSet, basename='promotion')
 
-urlpatterns = [
-    path('', PromotionViewSet.as_view({'post': 'compensate'})),
-]
+urlpatterns = router.urls 
