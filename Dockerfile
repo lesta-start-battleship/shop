@@ -27,6 +27,9 @@ RUN apt-get update \
 
 COPY --from=build /install /usr/local
 COPY . .
+
+RUN python manage.py collectstatic --noinput
+
 COPY wait-for-postgres.sh /wait-for-postgres.sh
 RUN chmod +x /wait-for-postgres.sh
 

@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 
 from kafka import send_chest_promo_purchase_event
 
+
 class Purchase(models.Model):
     """
     Покупка: сундука, предмета или акции.

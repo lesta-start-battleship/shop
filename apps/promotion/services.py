@@ -8,7 +8,8 @@ INV_SERVICE_URL = settings.INV_SERVICE_URL
 def promotion_has_ended(promotion):
     from django.utils.timezone import now
     return now() > (promotion.start_time + promotion.duration)
-
+  
+  
 def fetch_chest_data(chest_id):
     """
     Retrieves chest details from Inventory Service.
@@ -94,4 +95,3 @@ def compensate_unopened_chests(promotion):
 
     logger.info(f"Compensated {count} unopened chests for promotion {promotion.id}")
     return count
-

@@ -9,7 +9,7 @@ from .services import compensate_unopened_chests, promotion_has_ended
 from .models import Promotion
 from .serializers import PromotionSerializer
 
-# Create your views here.
+
 class PromotionViewSet(ModelViewSet):
     queryset = Promotion.objects.all()
     serializer_class = PromotionSerializer

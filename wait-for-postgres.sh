@@ -1,13 +1,16 @@
-#!/bin/sh
+#!/bin/bash
+# wait-for-db.sh
 
 set -e
 
 host="$1"
 shift
-until pg_isready -h "$host" -p 5432; do
-  echo "$host:5432 - no response"
+cmd="$@"
+
+until PGPASSWORD=$POSTGRES_PASSWORD psql -h "$host" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c '\q'; do
+  >&2 echo "PostgreSQL is unavailable - sleeping"
   sleep 1
 done
 
-echo "$host:5432 - accepting connections"
-exec "$@"
+>&2 echo "PostgreSQL is up - executing command"
+exec $cmd
