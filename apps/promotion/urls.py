@@ -1,6 +1,7 @@
 from django.urls import path, include
-import views
+from apps.promotion.views import PromotionViewSet
+
 
 urlpatterns = [
-    path('', views.PromotionViewSet),
+    path('', PromotionViewSet.as_view({'post': 'compensate'})),
 ]
