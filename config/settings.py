@@ -10,24 +10,23 @@ SECRET_KEY = env("SECRET_KEY", default="very-secret-key")
 DEBUG = env('DEBUG')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost'])
 
-INV_SERVICE_URL = env('INVENTORY_SERVICE_URL')
+INV_SERVICE_URL = env('INVENTORY_SERVICE_URL', default="service")
 
 # Приложения
 INSTALLED_APPS = [
-	'django.contrib.admin',
-	'django.contrib.auth',
-	'django.contrib.contenttypes',
-	'django.contrib.sessions',
-	'django.contrib.messages',
-	'django.contrib.staticfiles',
-	
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
 
-	# Кастомные
-	'apps.product.apps.ProductConfig',
-	'apps.promotion.apps.PromotionConfig',
-	'apps.chest.apps.ChestConfig',
-	'apps.purchase.apps.PurchaseConfig',
- 	'rest_framework',
+    # Кастомные
+    'apps.product.apps.ProductConfig',
+    'apps.promotion.apps.PromotionConfig',
+    'apps.chest.apps.ChestConfig',
+    'apps.purchase.apps.PurchaseConfig',
+    'rest_framework',
     'drf_yasg',
 ]
 

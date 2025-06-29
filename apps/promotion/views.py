@@ -1,8 +1,8 @@
+from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAdminUser
 from rest_framework.decorators import action 
 from rest_framework import status
-from rest_framework.responses import Response
 from drf_yasg.utils import swagger_auto_schema
 from .services import compensate_unopened_chests, promotion_has_ended
 
@@ -14,8 +14,7 @@ class PromotionViewSet(ModelViewSet):
     queryset = Promotion.objects.all()
     serializer_class = PromotionSerializer
     permission_classes = [IsAdminUser]
-    
-    
+
     @swagger_auto_schema(operation_description="Compensate unopened chests for this promotion.")
     @action(detail=True, methods=["post"], permission_classes=[IsAdminUser])
     def compensate(self, request, pk=None):

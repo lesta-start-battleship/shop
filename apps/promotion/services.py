@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 
 INV_SERVICE_URL = settings.INV_SERVICE_URL
 
+
 def promotion_has_ended(promotion):
     from django.utils.timezone import now
     return now() > (promotion.start_time + promotion.duration)
@@ -41,6 +42,7 @@ def calculate_gold_for_chest(chest_id):
     logger.debug(f"Chest {chest_id} compensation_value: {gold_amount}")
     
     return gold_amount
+
 
 def credit_gold(player_id, gold_amount):
     """
