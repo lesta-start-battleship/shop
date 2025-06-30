@@ -6,7 +6,7 @@ from apps.product.models import Product as Item
 from apps.chest.models import Chest
 from apps.promotion.models import Promotion
 
-from kafka import send_chest_promo_purchase_event
+from .scoreboard_client import send_chest_promo_purchase_event  # новый http клиент
 
 
 class TransactionStatus(models.TextChoices):
@@ -28,6 +28,8 @@ class Purchase(models.Model):
     chest = models.ForeignKey(Chest, null=True, blank=True, on_delete=models.SET_NULL)
     promotion = models.ForeignKey(Promotion, null=True, blank=True, on_delete=models.SET_NULL)
 
+    quantity = models.PositiveIntegerField(default=1)  # кол-во купленных сундуков/предметов/акций
+
     transaction_status = models.CharField(
         max_length=20,
         choices=TransactionStatus.choices,
@@ -38,11 +40,11 @@ class Purchase(models.Model):
 
     def __str__(self):
         if self.item:
-            return f"Purchase #{self.id} by UID {self.owner}: item #{self.item_id}"
+            return f"Purchase #{self.id} by UID {self.owner}: item #{self.item_id}, qty {self.quantity}"
         elif self.chest:
-            return f"Purchase #{self.id} by UID {self.owner}: chest #{self.chest_id}"
+            return f"Purchase #{self.id} by UID {self.owner}: chest #{self.chest_id}, qty {self.quantity}"
         elif self.promotion:
-            return f"Purchase #{self.id} by UID {self.owner}: promotion #{self.promotion_id}"
+            return f"Purchase #{self.id} by UID {self.owner}: promotion #{self.promotion_id}, qty {self.quantity}"
         return f"Purchase #{self.id} by UID {self.owner}: unknown"
 
     def clean(self):
@@ -54,6 +56,6 @@ class Purchase(models.Model):
         is_new = self.pk is None
         super().save(*args, **kwargs)
 
-        # Отправляем Kafka-событие, если покупка акционного сундука
+        # При новой покупке сундука по акции отправляем событие в промо-сервис
         if is_new and self.chest and self.promotion:
-            send_chest_promo_purchase_event(self.owner)
+            send_chest_promo_purchase_event(self.owner, self.quantity)
