@@ -97,3 +97,5 @@ def compensate_unopened_chests(promotion):
 
     logger.info(f"Compensated {count} unopened chests for promotion {promotion.id}")
     return count
+
+
