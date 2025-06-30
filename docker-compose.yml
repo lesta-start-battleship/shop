@@ -30,7 +30,6 @@ services:
     networks:
       - shopnet
 
-
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
     environment:
