@@ -11,17 +11,17 @@ from .serializers import PromotionSerializer
 
 
 class PromotionViewSet(ModelViewSet):
-	queryset = Promotion.objects.all()
-	serializer_class = PromotionSerializer
-	permission_classes = [IsAdminUser]
+    queryset = Promotion.objects.all()
+    serializer_class = PromotionSerializer
+    permission_classes = [IsAdminUser]
 
-	@swagger_auto_schema(operation_description="Compensate unopened chests for this promotion.")
-	@action(detail=True, methods=["post"], permission_classes=[IsAdminUser])
-	def compensate(self, request, pk=None):
-		promotion = self.get_object()
+    @swagger_auto_schema(operation_description="Compensate unopened chests for this promotion.")
+    @action(detail=True, methods=["post"], permission_classes=[IsAdminUser])
+    def compensate(self, request, pk=None):
+        promotion = self.get_object()
 
-		if not promotion_has_ended(promotion):
-			return Response({"detail": "Promotion still active."}, status=400)
-		compensated = compensate_unopened_chests(promotion)
+        if not promotion_has_ended(promotion):
+            return Response({"detail": "Promotion still active."}, status=400)
+        compensated = compensate_unopened_chests(promotion)
 
-		return Response({"detail": f"Compensated {compensated} unopened chests."})
+        return Response({"detail": f"Compensated {compensated} unopened chests."})

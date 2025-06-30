@@ -9,11 +9,13 @@ producer = Producer({
     'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
 })
 
+
 def delivery_report(err, msg):
     if err is not None:
         logger.error(f"[Kafka] Delivery failed: {err}")
     else:
         logger.info(f"[Kafka] Delivered to {msg.topic()} [{msg.partition()}]")
+
 
 def send_chest_promo_purchase_event(user_id: int):
     """
