@@ -1,25 +1,26 @@
-import uuid
-
-from django.conf import settings
-import requests
-from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
 from apps.product.models import Product
 from apps.product.serializers import ProductSerializer
 
 
-class ProductListView(generics.ListAPIView):
-	queryset = Product.objects.all()
-	serializer_class = ProductSerializer
+class ProductListView(APIView):
+	def get(self, request):
+		products = Product.objects.filter(chest__isnull=True)
+		serializer = ProductSerializer(products, many=True)
+		return Response(serializer.data)
 
 
-class ProductDetailView(generics.RetrieveAPIView):
-	queryset = Product.objects.all()
-	serializer_class = ProductSerializer
-	lookup_field = 'id'
-
+class ProductDetailView(APIView):
+	def get(self, request, pk):
+		try:
+			product = Product.objects.get(pk=pk, chest__isnull=True)
+		except Product.DoesNotExist:
+			return Response({"detail": "Product not found or inside chest"}, status=status.HTTP_404_NOT_FOUND)
+		serializer = ProductSerializer(product)
+		return Response(serializer.data)
 
 # AUTH_SERVICE_RESERVE_URL = "http://auth-service/api/auth/reserve/"
 # AUTH_SERVICE_COMMIT_URL = "http://auth-service/api/auth/commit/"

@@ -20,13 +20,12 @@ INSTALLED_APPS = [
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
 
-
 	# Кастомные
 	'apps.product.apps.ProductConfig',
 	'apps.promotion.apps.PromotionConfig',
 	'apps.chest.apps.ChestConfig',
 	'apps.purchase.apps.PurchaseConfig',
- 	'rest_framework',
+	'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -120,7 +119,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
 USE_TZ = True
 
@@ -137,10 +136,11 @@ REST_FRAMEWORK = {
 	}
 }
 
+
 CACHES = {
 	"default": {
 		"BACKEND": "django_redis.cache.RedisCache",
-		"LOCATION": "redis://redis:6379/1",
+		"LOCATION": "redis://localhost:6379/1",
 		"OPTIONS": {
 			"CLIENT_CLASS": "django_redis.client.DefaultClient",
 		}

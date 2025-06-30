@@ -25,6 +25,7 @@ services:
     depends_on:
       - db
       - kafka
+      - redis
     env_file:
       - .env
     environment:
@@ -55,6 +56,14 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - shopnet
+
+  redis:
+    image: redis:7
+    restart: always
+    ports:
+      - "6379:6379"
     networks:
       - shopnet
 
