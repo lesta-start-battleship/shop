@@ -3,7 +3,7 @@ services:
     image: postgres:15
     restart: always
     env_file:
-      - .env
+      - .env.prod
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -14,25 +14,22 @@ services:
       context: .
       dockerfile: Dockerfile
     command: >
-      /wait-for-postgres.sh db &&
-      sleep 10 &&
+      bash -c "/wait-for-postgres.sh db &&
       python manage.py migrate &&
-      gunicorn config.wsgi:application --bind 0.0.0.0:8000
+      exec gunicorn config.wsgi:application --bind 0.0.0.0:8000"
     ports:
       - "8000:8000"
     volumes:
-      - .:/code
+      - static_volume:/code/staticfiles
     depends_on:
       - db
       - kafka
+      - redis
     env_file:
-      - .env
-    environment:
-      - POSTGRES_HOST=db
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - KAFKA_PURCHASE_TOPIC=purchase-events
+      - .env.prod
     networks:
       - shopnet
+
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
@@ -58,8 +55,17 @@ services:
     networks:
       - shopnet
 
+  redis:
+    image: redis:7
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - shopnet
+
 volumes:
   postgres_data:
+  static_volume:
 
 networks:
   shopnet:
