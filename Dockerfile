@@ -1,4 +1,4 @@
-FROM python:3.11-slim as build
+FROM python:3.11-slim AS build
 
 WORKDIR /code
 
@@ -8,7 +8,6 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-
 RUN pip install --upgrade pip \
     && pip install --prefix=/install -r requirements.txt
 
@@ -26,8 +25,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /install /usr/local
-COPY . .
-COPY wait-for-postgres.sh /wait-for-postgres.sh
+COPY . /code
+
+COPY scripts/wait-for-postgres.sh /wait-for-postgres.sh
 RUN chmod +x /wait-for-postgres.sh
 
-CMD ["gunicorn", "service.wsgi:application", "--bind", "0.0.0.0:8000"]
+RUN python manage.py collectstatic --noinput
+
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]

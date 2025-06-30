@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import list_purchases
+from .views import PurchaseListCreateAPIView
 
 urlpatterns = [
-    path('', list_purchases),  # GET /purchase/?user_id=123
+    path('', PurchaseListCreateAPIView.as_view(), name="purchase-list-create"),  # GET и POST /purchase/
 ]

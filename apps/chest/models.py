@@ -17,4 +17,3 @@ class Chest(models.Model):
     item_probability = models.FloatField()
     currency_type = models.CharField(max_length=32)
     cost = models.IntegerField()
-    owner = models.UUIDField(null=True, default=None, blank=True)
