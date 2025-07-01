@@ -19,13 +19,15 @@ INSTALLED_APPS = [
 	'django.contrib.sessions',
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
+	'rest_framework',
 
 	# Кастомные
 	'apps.product.apps.ProductConfig',
 	'apps.promotion.apps.PromotionConfig',
 	'apps.chest.apps.ChestConfig',
 	'apps.purchase.apps.PurchaseConfig',
-	'rest_framework',
+	'apps.saga.apps.SagaConfig',
+
 ]
 
 MIDDLEWARE = [
@@ -70,47 +72,46 @@ DATABASES = {
 }
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
+	'version': 1,
+	'disable_existing_loggers': False,
 
-    'formatters': {
-        'verbose': {
-            'format': '[{asctime}] {levelname} [{name}] {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname}: {message}',
-            'style': '{',
-        },
-    },
+	'formatters': {
+		'verbose': {
+			'format': '[{asctime}] {levelname} [{name}] {message}',
+			'style': '{',
+		},
+		'simple': {
+			'format': '{levelname}: {message}',
+			'style': '{',
+		},
+	},
 
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'stream': sys.stdout,
-            'formatter': 'verbose',
-        },
-    },
+	'handlers': {
+		'console': {
+			'class': 'logging.StreamHandler',
+			'stream': sys.stdout,
+			'formatter': 'verbose',
+		},
+	},
 
-    'root': {
-        'handlers': ['console'],
-        'level': 'DEBUG' if DEBUG else 'INFO',
-    },
+	'root': {
+		'handlers': ['console'],
+		'level': 'DEBUG' if DEBUG else 'INFO',
+	},
 
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-        },
-        'apps.kafka': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-    },
+	'loggers': {
+		'django': {
+			'handlers': ['console'],
+			'level': 'DEBUG' if DEBUG else 'INFO',
+			'propagate': False,
+		},
+		'apps.kafka': {
+			'handlers': ['console'],
+			'level': 'DEBUG',
+			'propagate': False,
+		},
+	},
 }
-
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -125,7 +126,8 @@ USE_TZ = True
 
 REST_FRAMEWORK = {
 	'DEFAULT_AUTHENTICATION_CLASSES': [
-		'config.authentication.AuthServiceAuthentication',
+		'rest_framework_simplejwt.authentication.JWTAuthentication',
+		# 'config.authentication.AuthServiceAuthentication',
 	],
 	'DEFAULT_PERMISSION_CLASSES': [
 		'rest_framework.permissions.IsAuthenticated',
@@ -137,10 +139,11 @@ REST_FRAMEWORK = {
 }
 
 
+
 CACHES = {
 	"default": {
 		"BACKEND": "django_redis.cache.RedisCache",
-		"LOCATION": "redis://localhost:6379/1",
+		"LOCATION": "redis://redis:6379/1",
 		"OPTIONS": {
 			"CLIENT_CLASS": "django_redis.client.DefaultClient",
 		}

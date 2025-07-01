@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   db:
     image: postgres:15
@@ -9,29 +11,11 @@ services:
     networks:
       - shopnet
 
-  shop:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: >
-      /wait-for-postgres.sh db &&
-      sleep 10 &&
-      python manage.py migrate &&
-      gunicorn config.wsgi:application --bind 0.0.0.0:8000
+  redis:
+    image: redis:7
+    restart: always
     ports:
-      - "8000:8000"
-    volumes:
-      - .:/code
-    depends_on:
-      - db
-      - kafka
-      - redis
-    env_file:
-      - .env
-    environment:
-      - POSTGRES_HOST=db
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - KAFKA_PURCHASE_TOPIC=purchase-events
+      - "6379:6379"
     networks:
       - shopnet
 
@@ -59,16 +43,49 @@ services:
     networks:
       - shopnet
 
-  redis:
-    image: redis:7
-    restart: always
+  shop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: /entrypoint.sh
     ports:
-      - "6379:6379"
+      - "8000:8000"
+    volumes:
+      - .:/code
+      - static_volume:/code/staticfiles
+    depends_on:
+      - db
+      - kafka
+      - redis
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=db
+      - KAFKA_BOOTSTRAP_SERVERS=37.9.53.228:9092
+      - KAFKA_PRODUCT_TOPIC=shop.inventory.updates
+      - KAFKA_PRODUCT_GROUP=inventory-group
+    networks:
+      - shopnet
+
+  saga-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python manage.py run_saga_consumer
+    depends_on:
+      - kafka
+      - db
+    env_file:
+      - .env
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=37.9.53.228:9092
+      - KAFKA_SAGA_GROUP=saga-group
     networks:
       - shopnet
 
 volumes:
   postgres_data:
+  static_volume:
 
 networks:
   shopnet:

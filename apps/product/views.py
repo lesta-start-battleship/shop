@@ -1,86 +1,125 @@
-from rest_framework.views import APIView
+import time
+
+from django.urls import reverse
+from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 
-from apps.product.models import Product
-from apps.product.serializers import ProductSerializer
+from .models import Product
+from .serializers import ProductSerializer, ProductPurchaseSerializer
+from apps.saga.models import SagaOrchestrator
+import logging
 
-
-class ProductListView(APIView):
-	def get(self, request):
-		products = Product.objects.filter(chest__isnull=True)
-		serializer = ProductSerializer(products, many=True)
-		return Response(serializer.data)
+logger = logging.getLogger(__name__)
 
 
-class ProductDetailView(APIView):
-	def get(self, request, pk):
+class ProductListView(generics.ListAPIView):
+	serializer_class = ProductSerializer
+
+	def get_queryset(self):
+		return Product.objects.filter(
+			cost__isnull=False,
+			chest__isnull=True
+		).select_related('promotion')
+
+
+class ProductPurchaseView(generics.CreateAPIView):
+	permission_classes = [IsAuthenticated]
+	serializer_class = ProductPurchaseSerializer
+
+	def create(self, request, *args, **kwargs):
+		serializer = self.get_serializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+
 		try:
-			product = Product.objects.get(pk=pk, chest__isnull=True)
-		except Product.DoesNotExist:
-			return Response({"detail": "Product not found or inside chest"}, status=status.HTTP_404_NOT_FOUND)
-		serializer = ProductSerializer(product)
-		return Response(serializer.data)
+			product = Product.objects.get(pk=serializer.validated_data['product_id'])
 
-# AUTH_SERVICE_RESERVE_URL = "http://auth-service/api/auth/reserve/"
-# AUTH_SERVICE_COMMIT_URL = "http://auth-service/api/auth/commit/"
-# INVENTORY_SERVICE_ADD_ITEM_URL = "http://inventory-service/api/inventory/add-item/"
-#
-#
-# class BuyProductView(APIView):
-# 	# Используем настройки из settings.py: JWTAuthentication + IsAuthenticated
-#
-# 	def post(self, request, product_id):
-# 		user = request.user  # {'user_id': ..., 'username': ..., ...}
-#
-# 		try:
-# 			product = Product.objects.get(pk=product_id)
-# 		except Product.DoesNotExist:
-# 			return Response({"detail": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
-#
-# 		transaction_id = str(uuid.uuid4())
-#
-# 		# Шаг 1: Резервируем средства в auth-сервисе
-# 		reserve_payload = {
-# 			"user_id": user.get("user_id"),
-# 			"transaction_id": transaction_id,
-# 			"cost": product.price
-# 		}
-# 		reserve_res = requests.post(
-# 			AUTH_SERVICE_RESERVE_URL,
-# 			json=reserve_payload,
-# 			timeout=5
-# 		)
-# 		if reserve_res.status_code != status.HTTP_200_OK:
-# 			return Response({"detail": "Failed to reserve funds"}, status=status.HTTP_502_BAD_GATEWAY)
-#
-# 		# Шаг 2: Добавляем товар в инвентарь
-# 		inventory_payload = {
-# 			"user_id": user.get("user_id"),
-# 			"product_id": product.id,
-# 			"transaction_id": transaction_id
-# 		}
-# 		inventory_res = requests.post(
-# 			INVENTORY_SERVICE_ADD_ITEM_URL,
-# 			json=inventory_payload,
-# 			timeout=5
-# 		)
-#
-# 		if inventory_res.status_code != status.HTTP_200_OK:
-# 			return Response({"detail": "Failed to add item to inventory"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-#
-# 		# Шаг 3: Подтверждаем резерв, списываем баланс
-# 		commit_payload = {"transaction_id": transaction_id}
-# 		commit_res = requests.post(
-# 			AUTH_SERVICE_COMMIT_URL,
-# 			json=commit_payload,
-# 			timeout=5
-# 		)
-#
-# 		if commit_res.status_code != status.HTTP_200_OK:
-# 			return Response({"detail": "Failed to finalize balance commit"}, status=status.HTTP_502_BAD_GATEWAY)
-#
-# 		return Response({
-# 			"detail": "Product purchased and added to inventory",
-# 			"transaction_id": transaction_id
-# 		}, status=status.HTTP_200_OK)
+			# Проверка доступности товара
+			if product.cost is None:
+				return Response(
+					{"detail": "Product cost is not set"},
+					status=status.HTTP_400_BAD_REQUEST
+				)
+
+			if product.chest is not None:
+				return Response(
+					{"detail": "Cannot purchase product in chest directly"},
+					status=status.HTTP_400_BAD_REQUEST
+				)
+
+			# Создаем транзакцию
+			saga = SagaOrchestrator(
+				user_id=request.user.id,
+				product_type='product',
+				product_id=product.id,
+				quantity=serializer.validated_data['quantity'],
+				currency_type=product.currency_type,
+				promotion=product.promotion,
+				events=[]
+			)
+
+			# Запускаем транзакцию
+			if not saga.start_transaction():
+				return Response(
+					{
+						"detail": "Failed to start transaction",
+						"error": saga.error_reason
+					},
+					status=status.HTTP_400_BAD_REQUEST
+				)
+
+			# Генерируем URL для проверки статуса
+			status_url = f"{reverse('transaction-status')}?transaction_id={saga.transaction_id}"
+
+			# Формируем текстовое сообщение для JSON
+			message = (
+				f"Транзакция создана. ID: {saga.transaction_id}\n"
+				f"Статус: {saga.status}\n"
+				f"Для проверки статуса: {status_url}"
+			)
+
+			# Возвращаем JSON-ответ
+			return Response(
+				{"message": message},
+				status=status.HTTP_201_CREATED
+			)
+
+		except Product.DoesNotExist:
+			return Response(
+				{"detail": "Product not found"},
+				status=status.HTTP_404_NOT_FOUND
+			)
+		except Exception as e:
+			logger.error(f"Purchase error: {str(e)}", exc_info=True)
+			return Response(
+				{"detail": "Internal server error"},
+				status=status.HTTP_500_INTERNAL_SERVER_ERROR
+			)
+
+
+class TransactionStatusView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		transaction_id = request.GET.get('transaction_id')
+		if not transaction_id:
+			return Response({"error": "transaction_id is required"}, status=400)
+
+		try:
+			saga = SagaOrchestrator.objects.get(transaction_id=transaction_id, user_id=request.user.id)
+		except SagaOrchestrator.DoesNotExist:
+			return Response({"error": "Transaction not found"}, status=404)
+
+		start_time = time.time()
+		timeout = 10
+
+		while time.time() - start_time < timeout:
+			if saga.check_timeout():
+				return Response({"status": saga.status, "error_reason": saga.error_reason})
+
+			if saga.status != 'processing':
+				return Response({"status": saga.status, "error_reason": saga.error_reason})
+			time.sleep(1)
+			saga.refresh_from_db()
+		return Response({"status": "processing", "message": "Still processing"})

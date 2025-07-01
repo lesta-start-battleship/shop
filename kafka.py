@@ -6,7 +6,7 @@ import os
 logger = logging.getLogger(__name__)
 
 producer = Producer({
-    'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
+    'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', '37.9.53.228:9092')
 })
 
 def delivery_report(err, msg):
