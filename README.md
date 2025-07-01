@@ -1,5 +1,3 @@
-# shop
-
 ## .env example
 
 
@@ -21,4 +19,37 @@ KAFKA_TOPIC_AUTH_COMMIT=auth-commit
 
 SCOREBOARD_SERVICE_URL=http://7group_IP/api/purchases/
 INVENTORY_SERVICE_URL=http://inventory/api
+```
+
+# Shop Microservice
+
+Микросервис "Магазин" для игры "Морской бой".
+
+---
+
+
+## Установка и запуск
+
+1. Клонировать репозиторий:
+
+```bash
+git clone https://github.com/sendy-tech/shop.git
+cd shop
+git checkout dev
+```
+
+2. Запустить Docker Compose:
+
+```bash
+docker-compose up --build
+```
+
+3. Войти в контейнер и применить миграции:
+```bash
+docker-compose exec shop python manage.py migrate
+```
+
+4. Запустить тесты:
+```bash
+docker-compose exec shop python manage.py test
 ```
