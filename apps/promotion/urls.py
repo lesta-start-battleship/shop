@@ -1,5 +1,5 @@
 from django.urls import path, include
-import views
+from apps.promotion import views
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()

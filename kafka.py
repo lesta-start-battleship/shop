@@ -17,18 +17,18 @@ def delivery_report(err, msg):
         logger.info(f"[Kafka] Delivered to {msg.topic()} [{msg.partition()}]")
 
 
-def send_chest_promo_purchase_event(user_id: int):
-    """
-    Отправка события покупки сундука по акции.
-    """
-    topic = os.getenv('KAFKA_PURCHASE_TOPIC', 'purchase-events')
-    message = {
-        "user_id": user_id,
-        "event": "chest_promo_purchase"
-    }
-    producer.produce(
-        topic=topic,
-        value=json.dumps(message).encode('utf-8'),
-        callback=delivery_report
-    )
-    producer.flush()
+# def send_chest_promo_purchase_event(user_id: int):
+#     """
+#     Отправка события покупки сундука по акции.
+#     """
+#     topic = os.getenv('KAFKA_PURCHASE_TOPIC', 'purchase-events')
+#     message = {
+#         "user_id": user_id,
+#         "event": "chest_promo_purchase"
+#     }
+#     producer.produce(
+#         topic=topic,
+#         value=json.dumps(message).encode('utf-8'),
+#         callback=delivery_report
+#     )
+#     producer.flush()
