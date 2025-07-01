@@ -1,20 +1,10 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, permissions
 from drf_yasg.utils import swagger_auto_schema
 from .models import Purchase
 from .serializers import PurchaseSerializer
-
-def get_user_id_from_request(request):
-    user_id = request.headers.get("X-User-ID")
-    if not user_id:
-        return None, Response({"detail": "Missing X-User-ID header"}, status=status.HTTP_401_UNAUTHORIZED)
-    try:
-        user_id_int = int(user_id)
-    except ValueError:
-        return None, Response({"detail": "Invalid X-User-ID header"}, status=status.HTTP_400_BAD_REQUEST)
-    return user_id_int, None
 
 
 @swagger_auto_schema(
@@ -23,28 +13,22 @@ def get_user_id_from_request(request):
     responses={200: PurchaseSerializer(many=True)}
 )
 @api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
 def list_purchases(request):
-    user_id, error_response = get_user_id_from_request(request)
-    if error_response:
-        return error_response
-
-    purchases = Purchase.objects.filter(owner=user_id).order_by('-date')
+    purchases = Purchase.objects.filter(owner=request.user.id).order_by('-date')
     serializer = PurchaseSerializer(purchases, many=True)
     return Response(serializer.data)
 
 
 class PurchaseListCreateAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Get list of purchases for current user (X-User-ID header required).",
         responses={200: PurchaseSerializer(many=True)}
     )
     def get(self, request):
-        user_id, error_response = get_user_id_from_request(request)
-        if error_response:
-            return error_response
-
-        purchases = Purchase.objects.filter(owner=user_id)
+        purchases = Purchase.objects.filter(owner=request.user.id)
         serializer = PurchaseSerializer(purchases, many=True)
         return Response(serializer.data)
 
@@ -57,14 +41,19 @@ class PurchaseListCreateAPIView(APIView):
         }
     )
     def post(self, request):
-        user_id, error_response = get_user_id_from_request(request)
-        if error_response:
-            return error_response
-
         data = request.data.copy()
-        data["owner"] = user_id
+        data["owner"] = request.user.id
         serializer = PurchaseSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+def get_user_id_from_request(request) -> int:
+    """
+    Извлекает user_id из request.user, предполагая, что используется XUserIDAuthentication.
+    """
+    if not request.user or request.user.is_anonymous:
+        raise ValueError("Anonymous user")
+
+    return request.user.id

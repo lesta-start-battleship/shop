@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 from django.test import TestCase
-from django.utils import timezone
 from django.core.exceptions import ValidationError
 from unittest.mock import patch
 
@@ -84,24 +83,24 @@ class PurchaseModelTest(TestCase):
             purchase.full_clean()
 
     def test_invalid_price_validation(self):
-        # Проверяем, что отрицательная цена предмета вызывает ошибку
+        # Проверка: цена предмета отрицательная
         self.item.cost = -5
         with self.assertRaises(ValidationError):
             self.item.full_clean()
+
         purchase = Purchase(owner=7, item=self.item)
         with self.assertRaisesMessage(ValidationError, "Цена предмета должна быть положительной."):
             purchase.full_clean()
 
-        # Аналогично для сундука
-        self.chest.cost = 0
-        self.chest.save()
         purchase = Purchase(owner=8, chest=self.chest)
         with self.assertRaisesMessage(ValidationError, "Цена сундука должна быть положительной."):
             purchase.full_clean()
 
-        # Аналогично для акции
+        # Проверка: цена акции отрицательная
         self.promo.price = -1
-        self.promo.save()
+        with self.assertRaises(ValidationError):
+            self.promo.full_clean()
+
         purchase = Purchase(owner=9, chest=self.chest, promotion=self.promo)
         with self.assertRaisesMessage(ValidationError, "Цена акции должна быть положительной."):
             purchase.full_clean()
@@ -157,10 +156,8 @@ class PurchaseKafkaTest(TestCase):
     @patch("apps.purchase.models.send_chest_promo_purchase_event")
     def test_kafka_event_not_sent_for_promo_without_chest(self, mock_send_event):
         purchase = Purchase(owner=4, promotion=self.promo)
-        # Создавать такую покупку запрещено новой логикой, но если пройти - событие не отправится
         with self.assertRaisesMessage(ValidationError, "Ровно одно из полей item или chest должно быть заполнено."):
             purchase.full_clean()
-        # purchase.save()  # save не вызовется, ошибка при full_clean()
 
 
 # ----------- API ТЕСТЫ -----------
@@ -252,5 +249,5 @@ class PurchaseAPITest(APITestCase):
 
     def test_unauthorized_without_x_user_id(self):
         response = self.client.post(self.url, {"item": self.item.id})
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertIn("Missing X-User-ID", response.data["detail"])
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("Authentication credentials", response.data["detail"])

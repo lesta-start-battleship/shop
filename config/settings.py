@@ -128,7 +128,7 @@ USE_TZ = True
 
 REST_FRAMEWORK = {
 	'DEFAULT_AUTHENTICATION_CLASSES': [
-		'config.authentication.AuthServiceAuthentication',
+		'config.authentication.XUserIDAuthentication',
 	],
 	'DEFAULT_PERMISSION_CLASSES': [
 		'rest_framework.permissions.IsAuthenticated',
