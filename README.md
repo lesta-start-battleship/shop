@@ -53,6 +53,3 @@ docker-compose exec shop python manage.py migrate
 ```bash
 docker-compose exec shop python manage.py test
 ```
-=======
-INVENTORY_SERVICE_URL=http://inventory/api
-```
