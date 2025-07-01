@@ -9,4 +9,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path('', views.PublicPromotionListView.as_view()),
     path('<int:pk>/', views.SpecificPromotionView.as_view()),
+    path('<int:pk>/buy', views.BuyPromotionView.as_view()),
 ]
