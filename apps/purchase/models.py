@@ -15,7 +15,6 @@ class TransactionStatus(models.TextChoices):
     DECLINED = "declined", "Отклонено"
     COMPLETED = "completed", "Завершено"
     FAILED = "failed", "Ошибка"
-    CANCELLED = "cancelled", "Отменено"
 
 
 class Purchase(models.Model):
