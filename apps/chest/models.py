@@ -16,4 +16,4 @@ class Chest(models.Model):
     )
     item_probability = models.FloatField()
     currency_type = models.CharField(max_length=32)
-    cost = models.IntegerField()
+    cost = models.IntegerField(default=1)

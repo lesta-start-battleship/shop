@@ -8,9 +8,17 @@ class PurchaseSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def validate(self, data):
-        targets = [data.get('item'), data.get('chest'), data.get('promotion')]
-        if sum(x is not None for x in targets) != 1:
+        item = data.get('item')
+        chest = data.get('chest')
+        promotion = data.get('promotion')
+
+        if (item is None and chest is None) or (item is not None and chest is not None):
             raise serializers.ValidationError(
-                "Ровно одно из полей item, chest или promotion должно быть заполнено."
+                "Ровно одно из полей item или chest должно быть заполнено."
+            )
+
+        if promotion and promotion.price <= 0:
+            raise serializers.ValidationError(
+                "Цена акции должна быть положительной."
             )
         return data
