@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   db:
     image: postgres:15
@@ -6,27 +8,6 @@ services:
       - .env.prod
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - shopnet
-
-  shop:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: >
-      bash -c "/wait-for-postgres.sh db &&
-      python manage.py migrate &&
-      exec gunicorn config.wsgi:application --bind 0.0.0.0:8000"
-    ports:
-      - "8000:8000"
-    volumes:
-      - static_volume:/code/staticfiles
-    depends_on:
-      - db
-      - kafka
-      - redis
-    env_file:
-      - .env.prod
     networks:
       - shopnet
 
@@ -62,9 +43,63 @@ services:
     networks:
       - shopnet
 
+  shop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: /entrypoint.sh
+    ports:
+      - "8000:8000"
+    volumes:
+      - static_volume:/code/staticfiles
+    depends_on:
+      - db
+      - kafka
+      - redis
+    env_file:
+      - .env.prod
+      - .env
+    environment:
+      - POSTGRES_HOST=db
+      - KAFKA_BOOTSTRAP_SERVERS=37.9.53.228:9092
+      - KAFKA_PRODUCT_TOPIC=shop.inventory.updates
+      - KAFKA_PRODUCT_GROUP=inventory-group
+    networks:
+      - shopnet
+
+  saga-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["/wait-for-postgres.sh", "db", "python", "manage.py", "run_saga_consumer"]
+    depends_on:
+      - db
+      - kafka
+    env_file:
+      - .env
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=37.9.53.228:9092
+      - KAFKA_SAGA_GROUP=saga-group
+    networks:
+      - shopnet
+
+  kafka-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["/wait-for-postgres.sh", "db", "python", "manage.py", "run_product_consumer"]
+    depends_on:
+      - kafka
+      - db
+    env_file:
+      - .env.prod
+    networks:
+      - shopnet
+
 volumes:
   postgres_data:
   static_volume:
 
 networks:
   shopnet:
+    driver: bridge
