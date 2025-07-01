@@ -1,33 +1,32 @@
-FROM python:3.11-slim as build
-
+# === build stage ===
+FROM python:3.11-slim AS build
 WORKDIR /code
-
-RUN apt-get update \
-        && apt-get install -y --no-install-recommends gcc libpq-dev \
-        && apt-get clean \
-        && rm -rf /var/lib/apt/lists/*
+# …установка gcc, libpq-dev, pip install…
 COPY requirements.txt .
+RUN pip install --prefix=/install -r requirements.txt
 
-RUN pip install --upgrade pip \
-        && pip install --prefix=/install -r requirements.txt
-
-
+# === final stage ===
 FROM python:3.11-slim
-
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
 WORKDIR /code
 
-RUN apt-get update \
-        && apt-get install -y --no-install-recommends postgresql-client \
-        && apt-get clean \
-        && rm -rf /var/lib/apt/lists/*
+# переменные окружения…
+RUN apt-get update && apt-get install -y postgresql-client
 
+# копируем зависимости из билд-стейджа
 COPY --from=build /install /usr/local
-COPY . .
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
 
+# копируем код приложения
+COPY . /code
 
-CMD ["gunicorn", "service.wsgi:application", "--bind", "0.0.0.0:8000"]
+# **ВАЖНО**: копируем скрипты в корень
+COPY scripts/wait-for-postgres.sh /wait-for-postgres.sh
+COPY entrypoint.sh              /entrypoint.sh
+
+# делаем их исполняемыми
+RUN chmod +x /wait-for-postgres.sh /entrypoint.sh
+
+# собираем статику
+RUN python manage.py collectstatic --noinput
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]

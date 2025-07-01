@@ -1,4 +1,3 @@
-# apps/product/models.py
 from django.db import models
 
 class Product(models.Model):
@@ -7,17 +6,17 @@ class Product(models.Model):
     currency_type = models.CharField(max_length=255, blank=True, null=True)
     cost = models.IntegerField(blank=True, null=True)
     promotion = models.ForeignKey(
-        "promotion.Promotion", 
-        on_delete=models.SET_NULL, 
-        blank=True, 
-        null=True, 
+        "promotion.Promotion",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
         related_name='products'
     )
     chest = models.ForeignKey(
-        "chest.Chest", 
-        on_delete=models.SET_NULL, 
-        blank=True, 
-        null=True, 
+        "chest.Chest",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
         related_name='products_in_chest'
     )
 

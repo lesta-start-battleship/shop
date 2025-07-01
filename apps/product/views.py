@@ -9,9 +9,7 @@ from rest_framework.views import APIView
 from .models import Product
 from .serializers import ProductSerializer, ProductPurchaseSerializer
 from apps.saga.models import SagaOrchestrator
-import logging
 
-logger = logging.getLogger(__name__)
 
 
 class ProductListView(generics.ListAPIView):
@@ -91,7 +89,6 @@ class ProductPurchaseView(generics.CreateAPIView):
 				status=status.HTTP_404_NOT_FOUND
 			)
 		except Exception as e:
-			logger.error(f"Purchase error: {str(e)}", exc_info=True)
 			return Response(
 				{"detail": "Internal server error"},
 				status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -107,19 +104,28 @@ class TransactionStatusView(APIView):
 			return Response({"error": "transaction_id is required"}, status=400)
 
 		try:
+			# Проверяем, что транзакция принадлежит текущему пользователю
 			saga = SagaOrchestrator.objects.get(transaction_id=transaction_id, user_id=request.user.id)
 		except SagaOrchestrator.DoesNotExist:
 			return Response({"error": "Transaction not found"}, status=404)
 
 		start_time = time.time()
-		timeout = 10
+		timeout = 10  # Уменьшенное время ожидания в секундах
 
+		# Цикл long polling
 		while time.time() - start_time < timeout:
+			# Проверяем, не истек ли тайм-аут транзакции
 			if saga.check_timeout():
 				return Response({"status": saga.status, "error_reason": saga.error_reason})
 
 			if saga.status != 'processing':
+				# Если статус изменился, возвращаем его
 				return Response({"status": saga.status, "error_reason": saga.error_reason})
-			time.sleep(1)
-			saga.refresh_from_db()
+
+			time.sleep(1)  # Ждем 1 секунду перед следующей проверкой
+			saga.refresh_from_db()  # Обновляем данные из базы
+
+		# Если время ожидания истекло
 		return Response({"status": "processing", "message": "Still processing"})
+
+

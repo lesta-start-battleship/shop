@@ -1,40 +1,15 @@
-version: "3.9"
+version: "3.8"
 
 services:
   db:
     image: postgres:15
     restart: always
     env_file:
-      - .env
+      - .env.prod
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - shopnet
-
-  shop:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: /entrypoint.sh
-    ports:
-      - "8000:8000"
-    volumes:
-      - .:/code
-      - static_volume:/code/staticfiles
-    depends_on:
-      - db
-      - kafka
-      - redis
-    env_file:
-      - .env
-    environment:
-      - POSTGRES_HOST=db
-      - KAFKA_BOOTSTRAP_SERVERS=37.9.53.228:9092
-      - KAFKA_PRODUCT_TOPIC=shop.inventory.updates
-      - KAFKA_PRODUCT_GROUP=inventory-group
-    networks:
-      - shopnet
-
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
@@ -60,14 +35,46 @@ services:
     networks:
       - shopnet
 
+  redis:
+    image: redis:7
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - shopnet
+
+  shop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: /entrypoint.sh
+    ports:
+      - "8000:8000"
+    volumes:
+      - static_volume:/code/staticfiles
+    depends_on:
+      - db
+      - kafka
+      - redis
+    env_file:
+      - .env.prod
+      - .env
+    environment:
+      - POSTGRES_HOST=db
+      - KAFKA_BOOTSTRAP_SERVERS=37.9.53.228:9092
+      - KAFKA_PRODUCT_TOPIC=shop.inventory.updates
+      - KAFKA_PRODUCT_GROUP=inventory-group
+    networks:
+      - shopnet
+
   saga-consumer:
     build:
       context: .
       dockerfile: Dockerfile
-    command: python manage.py run_saga_consumer
+    entrypoint: ["/wait-for-postgres.sh", "db", "python", "manage.py", "run_saga_consumer"]
     depends_on:
-      - kafka
       - db
+      - kafka
     env_file:
       - .env
     environment:
@@ -76,11 +83,16 @@ services:
     networks:
       - shopnet
 
-  redis:
-    image: redis:7
-    restart: always
-    ports:
-      - "6379:6379"
+  kafka-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["/wait-for-postgres.sh", "db", "python", "manage.py", "run_product_consumer"]
+    depends_on:
+      - kafka
+      - db
+    env_file:
+      - .env.prod
     networks:
       - shopnet
 
@@ -90,3 +102,4 @@ volumes:
 
 networks:
   shopnet:
+    driver: bridge
