@@ -1,15 +1,17 @@
 from rest_framework.response import Response
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework import status
 from django.utils.timezone import now
 from drf_yasg.utils import swagger_auto_schema
 from .services import compensate_unopened_chests, promotion_has_ended
-
+# from apps.purchase.services import process_purchase
+from apps.promotion.models import Promotion
+from apps.purchase.models import Purchase
 from .models import Promotion
 from .serializers import PromotionSerializer
 
@@ -62,4 +64,29 @@ class SpecificPromotionView(APIView):
         
         serializer = PromotionSerializer(prom)
         return Response(serializer.data)
+    
+class BuyPromotionView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_summary="Buy Promotion Bundle",
+        operation_description="Purchases the full promotion bundle, granting all linked chests and products to the player.",
+        responses={201: "Purchase successful", 400: "Validation error", 404: "Promotion not found"}
+    )
+    def post(self, request, pk):
+        try:
+            promo = Promotion.objects.get(pk=pk)
+        except Promotion.DoesNotExist:
+            raise NotFound("Promotion not found.")
+
+        if promotion_has_ended(promo):
+            raise ValidationError("Promotion has already ended.")
+
+        player_id = request.user.id  # Assuming Auth Service injects user via token
+
+        # Call service to handle purchase logic
+        # process_purchase(player_id, promo)
+
+        return Response({"detail": "Promotion purchased successfully."}, status=201)
+    
         

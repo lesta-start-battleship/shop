@@ -18,6 +18,7 @@ KAFKA_TOPIC_INVENTORY_ADD=inventory-add
 KAFKA_TOPIC_AUTH_COMMIT=auth-commit
 
 SCOREBOARD_SERVICE_URL=http://7group_IP/api/purchases/
+INVENTORY_SERVICE_URL=http://inventory/api
 ```
 
 # Shop Microservice
@@ -62,4 +63,7 @@ docker-compose exec shop python manage.py migrate
 4. Запустить тесты:
 ```bash
 docker-compose exec shop python manage.py test
+```
+=======
+INVENTORY_SERVICE_URL=http://inventory/api
 ```
