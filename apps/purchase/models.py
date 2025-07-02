@@ -9,14 +9,6 @@ from apps.promotion.models import Promotion
 from kafka.producer import send_chest_promo_purchase_kafka_event
 
 
-class TransactionStatus(models.TextChoices):
-    PENDING = "pending", "Ожидание"
-    RESERVED = "reserved", "Баланс зарезервирован"
-    DECLINED = "declined", "Отклонено"
-    COMPLETED = "completed", "Завершено"
-    FAILED = "failed", "Ошибка"
-
-
 class Purchase(models.Model):
     """
     Покупка: сундука, предмета или акции.
@@ -28,12 +20,6 @@ class Purchase(models.Model):
     promotion = models.ForeignKey(Promotion, null=True, blank=True, on_delete=models.SET_NULL, related_name='purchase_promo')
 
     quantity = models.PositiveIntegerField(default=1)  # кол-во купленных сундуков/предметов/акций
-
-    transaction_status = models.CharField(
-        max_length=20,
-        choices=TransactionStatus.choices,
-        default=TransactionStatus.PENDING
-    )
 
     date = models.DateTimeField(default=timezone.now)
 
