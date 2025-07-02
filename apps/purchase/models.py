@@ -6,7 +6,7 @@ from apps.product.models import Product as Item
 from apps.chest.models import Chest
 from apps.promotion.models import Promotion
 
-from .scoreboard_client import send_chest_promo_purchase_event  # новый http клиент
+from kafka.producer import send_chest_promo_purchase_kafka_event
 
 
 class TransactionStatus(models.TextChoices):
@@ -51,8 +51,6 @@ class Purchase(models.Model):
         if (self.item is None and self.chest is None) or (self.item is not None and self.chest is not None):
             raise ValidationError("Ровно одно из полей item или chest должно быть заполнено.")
 
-        # promotion может быть заполнено или нет, не влияет на проверку выше
-
         # Проверка положительной цены
         if self.item and self.item.cost <= 0:
             raise ValidationError("Цена предмета должна быть положительной.")
@@ -70,6 +68,5 @@ class Purchase(models.Model):
         is_new = self.pk is None
         super().save(*args, **kwargs)
 
-        # При новой покупке сундука по акции отправляем событие в промо-сервис
         if is_new and self.chest and self.promotion:
-            send_chest_promo_purchase_event(self.owner, self.quantity)
+            send_chest_promo_purchase_kafka_event(self.owner, self.quantity)
