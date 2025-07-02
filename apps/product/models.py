@@ -2,7 +2,6 @@ from django.db import models
 import apps.promotion.models, apps.chest.models
 
 
-
 class Product(models.Model):
 	name = models.CharField(max_length=255)
 	description = models.TextField()
