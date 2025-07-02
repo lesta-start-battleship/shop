@@ -51,21 +51,6 @@ services:
     networks:
       - shopnet
 
-  nginx:
-    image: nginx:1.25
-    restart: always
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl
-      - static_volume:/code/staticfiles
-    ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - shop
-    networks:
-      - shopnet
-
 volumes:
   postgres_data:
   static_volume:
