@@ -1,87 +1,131 @@
-from rest_framework.views import APIView
+import time
+
+from django.urls import reverse
+from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework import status, viewsets
-from rest_framework.permissions import IsAdminUser
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 
-from apps.product.models import Product
-from apps.product.serializers import ProductSerializer
-from apps.purchase.services import start_product_purchase
-from apps.purchase.serializers import PurchaseSerializer
-from apps.purchase.views import get_user_id_from_request
+from .models import Product
+from .serializers import ProductSerializer, ProductPurchaseSerializer
+from apps.saga.models import SagaOrchestrator
 
 
-class ProductListView(APIView):
-    @swagger_auto_schema(operation_description="Get list of all products (excluding those inside chests)")
-    def get(self, request):
-        products = Product.objects.filter(chest__isnull=True)
-        serializer = ProductSerializer(products, many=True)
-        return Response(serializer.data)
+
+class ProductListView(generics.ListAPIView):
+	serializer_class = ProductSerializer
+
+	def get_queryset(self):
+		return Product.objects.filter(
+			cost__isnull=False,
+			chest__isnull=True
+		).select_related('promotion')
 
 
-class ProductDetailView(APIView):
-    @swagger_auto_schema(operation_description="Get details of a product by ID (excluding those inside chests)")
-    def get(self, request, pk):
-        try:
-            product = Product.objects.get(pk=pk, chest__isnull=True)
-        except Product.DoesNotExist:
-            return Response({"detail": "Product not found or inside chest"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = ProductSerializer(product)
-        return Response(serializer.data)
+class ProductPurchaseView(generics.CreateAPIView):
+	permission_classes = [IsAuthenticated]
+	serializer_class = ProductPurchaseSerializer
+
+	def create(self, request, *args, **kwargs):
+		serializer = self.get_serializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+
+		try:
+			product = Product.objects.get(pk=serializer.validated_data['product_id'])
+
+			# Проверка доступности товара
+			if product.cost is None:
+				return Response(
+					{"detail": "Product cost is not set"},
+					status=status.HTTP_400_BAD_REQUEST
+				)
+
+			if product.chest is not None:
+				return Response(
+					{"detail": "Cannot purchase product in chest directly"},
+					status=status.HTTP_400_BAD_REQUEST
+				)
+
+			# Создаем транзакцию
+			saga = SagaOrchestrator(
+				user_id=request.user.id,
+				product_type='product',
+				product_id=product.id,
+				quantity=serializer.validated_data['quantity'],
+				currency_type=product.currency_type,
+				promotion=product.promotion,
+				events=[]
+			)
+
+			# Запускаем транзакцию
+			if not saga.start_transaction():
+				return Response(
+					{
+						"detail": "Failed to start transaction",
+						"error": saga.error_reason
+					},
+					status=status.HTTP_400_BAD_REQUEST
+				)
+
+			# Генерируем URL для проверки статуса
+			status_url = f"{reverse('transaction-status')}?transaction_id={saga.transaction_id}"
+
+			# Формируем текстовое сообщение для JSON
+			message = (
+				f"Транзакция создана. ID: {saga.transaction_id}\n"
+				f"Статус: {saga.status}\n"
+				f"Для проверки статуса: {status_url}"
+			)
+
+			# Возвращаем JSON-ответ
+			return Response(
+				{"message": message},
+				status=status.HTTP_201_CREATED
+			)
+
+		except Product.DoesNotExist:
+			return Response(
+				{"detail": "Product not found"},
+				status=status.HTTP_404_NOT_FOUND
+			)
+		except Exception as e:
+			return Response(
+				{"detail": "Internal server error"},
+				status=status.HTTP_500_INTERNAL_SERVER_ERROR
+			)
 
 
-class AdminProductViewSet(viewsets.ModelViewSet):
-    """
-    Admin CRUD for Product: create, update, delete products.
-    """
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-    permission_classes = [IsAdminUser]
+class TransactionStatusView(APIView):
+	permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(operation_description="Get list of all products")
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+	def get(self, request):
+		transaction_id = request.GET.get('transaction_id')
+		if not transaction_id:
+			return Response({"error": "transaction_id is required"}, status=400)
 
-    @swagger_auto_schema(operation_description="Create a new product")
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+		try:
+			# Проверяем, что транзакция принадлежит текущему пользователю
+			saga = SagaOrchestrator.objects.get(transaction_id=transaction_id, user_id=request.user.id)
+		except SagaOrchestrator.DoesNotExist:
+			return Response({"error": "Transaction not found"}, status=404)
 
-    @swagger_auto_schema(operation_description="Update product by ID")
-    def partial_update(self, request, *args, **kwargs):
-        return super().partial_update(request, *args, **kwargs)
+		start_time = time.time()
+		timeout = 10  # Уменьшенное время ожидания в секундах
 
-    @swagger_auto_schema(operation_description="Delete product by ID")
-    def destroy(self, request, *args, **kwargs):
-        return super().destroy(request, *args, **kwargs)
+		# Цикл long polling
+		while time.time() - start_time < timeout:
+			# Проверяем, не истек ли тайм-аут транзакции
+			if saga.check_timeout():
+				return Response({"status": saga.status, "error_reason": saga.error_reason})
+
+			if saga.status != 'processing':
+				# Если статус изменился, возвращаем его
+				return Response({"status": saga.status, "error_reason": saga.error_reason})
+
+			time.sleep(1)  # Ждем 1 секунду перед следующей проверкой
+			saga.refresh_from_db()  # Обновляем данные из базы
+
+		# Если время ожидания истекло
+		return Response({"status": "processing", "message": "Still processing"})
 
 
-class BuyProductView(APIView):
-    user_id_header = openapi.Parameter(
-        "X-User-ID",
-        openapi.IN_HEADER,
-        description="User ID from API Gateway",
-        type=openapi.TYPE_INTEGER,
-        required=True,
-    )
-
-    @swagger_auto_schema(
-        operation_description="Purchase a product by ID",
-        manual_parameters=[user_id_header],
-        responses={201: PurchaseSerializer}
-    )
-    def post(self, request, product_id):
-        user_id, error = get_user_id_from_request(request)
-        if error:
-            return error
-
-        try:
-            product = Product.objects.get(pk=product_id)
-        except Product.DoesNotExist:
-            return Response({"detail": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        if not product.cost:
-            return Response({"detail": "Product has no cost"}, status=status.HTTP_400_BAD_REQUEST)
-
-        purchase = start_product_purchase(user_id, product_id)
-        return Response(PurchaseSerializer(purchase).data, status=status.HTTP_201_CREATED)

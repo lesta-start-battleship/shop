@@ -16,6 +16,7 @@ TOPICS = [
     os.getenv('KAFKA_TOPIC_INVENTORY_RESULT', 'inventory-result'),
     os.getenv('KAFKA_TOPIC_AUTH_COMMIT_RESULT', 'auth-commit-result'),
     os.getenv('KAFKA_PURCHASE_TOPIC', 'guild.wars.results'),
+    os.getenv("KAFKA_SCOREBOARD_TOPIC", "scoreboard-events"),
 ]
 
 consumer_conf = {

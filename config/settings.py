@@ -16,20 +16,21 @@ INV_SERVICE_URL = env('INVENTORY_SERVICE_URL', default="service")
 
 # Приложения
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+	'django.contrib.admin',
+	'django.contrib.auth',
+	'django.contrib.contenttypes',
+	'django.contrib.sessions',
+	'django.contrib.messages',
+	'django.contrib.staticfiles',
+	'rest_framework',
 
-    # Кастомные
-    'apps.product.apps.ProductConfig',
-    'apps.promotion.apps.PromotionConfig',
-    'apps.chest.apps.ChestConfig',
-    'apps.purchase.apps.PurchaseConfig',
-    'rest_framework',
-    'drf_yasg',
+	# Кастомные
+	'apps.product.apps.ProductConfig',
+	'apps.promotion.apps.PromotionConfig',
+	'apps.chest.apps.ChestConfig',
+	'apps.purchase.apps.PurchaseConfig',
+	'apps.saga.apps.SagaConfig',
+  'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -75,45 +76,45 @@ DATABASES = {
 }
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
+	'version': 1,
+	'disable_existing_loggers': False,
 
-    'formatters': {
-        'verbose': {
-            'format': '[{asctime}] {levelname} [{name}] {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname}: {message}',
-            'style': '{',
-        },
-    },
+	'formatters': {
+		'verbose': {
+			'format': '[{asctime}] {levelname} [{name}] {message}',
+			'style': '{',
+		},
+		'simple': {
+			'format': '{levelname}: {message}',
+			'style': '{',
+		},
+	},
 
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'stream': sys.stdout,
-            'formatter': 'verbose',
-        },
-    },
+	'handlers': {
+		'console': {
+			'class': 'logging.StreamHandler',
+			'stream': sys.stdout,
+			'formatter': 'verbose',
+		},
+	},
 
-    'root': {
-        'handlers': ['console'],
-        'level': 'DEBUG' if DEBUG else 'INFO',
-    },
+	'root': {
+		'handlers': ['console'],
+		'level': 'DEBUG' if DEBUG else 'INFO',
+	},
 
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-        },
-        'apps.kafka': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-    },
+	'loggers': {
+		'django': {
+			'handlers': ['console'],
+			'level': 'DEBUG' if DEBUG else 'INFO',
+			'propagate': False,
+		},
+		'apps.kafka': {
+			'handlers': ['console'],
+			'level': 'DEBUG',
+			'propagate': False,
+		},
+	},
 }
 
 STATIC_URL = '/static/'
@@ -127,17 +128,18 @@ TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
 USE_TZ = True
 
-# REST_FRAMEWORK = {
-#     'DEFAULT_AUTHENTICATION_CLASSES': [
-#         'config.authentication.AuthServiceAuthentication',
-#     ],
-#     'DEFAULT_PERMISSION_CLASSES': [
-#         'rest_framework.permissions.IsAuthenticated',
-#     ],
-#     'DEFAULT_THROTTLE_RATES': {
-#         'anon': '50/min',
-#         'user': '50/min'
-#     }
+# 	'DEFAULT_AUTHENTICATION_CLASSES': [
+# 		'rest_framework_simplejwt.authentication.JWTAuthentication',
+# 		# 'config.authentication.AuthServiceAuthentication',
+# 		'config.authentication.XUserIDAuthentication',
+# 	],
+# 	'DEFAULT_PERMISSION_CLASSES': [
+# 		'rest_framework.permissions.IsAuthenticated',
+# 	],
+# 	'DEFAULT_THROTTLE_RATES': {
+# 		'anon': '50/min',
+# 		'user': '50/min'
+# 	}
 # }
 
 # TODO delete or change before prod

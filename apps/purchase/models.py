@@ -6,7 +6,7 @@ from apps.product.models import Product as Item
 from apps.chest.models import Chest
 from apps.promotion.models import Promotion
 
-from .scoreboard_client import send_chest_promo_purchase_event  # новый http клиент
+from kafka.producer import send_chest_promo_purchase_kafka_event
 
 
 class TransactionStatus(models.TextChoices):
@@ -47,14 +47,26 @@ class Purchase(models.Model):
         return f"Purchase #{self.id} by UID {self.owner}: unknown"
 
     def clean(self):
-        filled = [self.item, self.chest, self.promotion]
-        if sum(x is not None for x in filled) != 1:
-            raise ValidationError("Ровно одно из полей item, chest или promotion должно быть заполнено.")
+        # Проверяем, что заполнено ровно одно из item или chest
+        if (self.item is None and self.chest is None) or (self.item is not None and self.chest is not None):
+            raise ValidationError("Ровно одно из полей item или chest должно быть заполнено.")
+
+        # Проверка положительной цены
+        if self.item and self.item.cost <= 0:
+            raise ValidationError("Цена предмета должна быть положительной.")
+        if self.chest and self.chest.cost <= 0:
+            raise ValidationError("Цена сундука должна быть положительной.")
+        if self.promotion and self.promotion.price <= 0:
+            raise ValidationError("Цена акции должна быть положительной.")
+
+        # Проверка количества
+        if self.quantity <= 0:
+            raise ValidationError("Количество должно быть положительным.")
 
     def save(self, *args, **kwargs):
+        self.full_clean()
         is_new = self.pk is None
         super().save(*args, **kwargs)
 
-        # При новой покупке сундука по акции отправляем событие в промо-сервис
         if is_new and self.chest and self.promotion:
-            send_chest_promo_purchase_event(self.owner, self.quantity)
+            send_chest_promo_purchase_kafka_event(self.owner, self.quantity)
