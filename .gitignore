@@ -50,3 +50,7 @@ dmypy.json
 
 # pyright
 pyrig
+
+# nginx
+nginx/ssl/*.crt
+nginx/ssl/*.cnf
