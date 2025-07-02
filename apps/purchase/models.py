@@ -23,9 +23,9 @@ class Purchase(models.Model):
     """
     owner = models.IntegerField()  # UID пользователя
 
-    item = models.ForeignKey(Item, null=True, blank=True, on_delete=models.SET_NULL)
-    chest = models.ForeignKey(Chest, null=True, blank=True, on_delete=models.SET_NULL)
-    promotion = models.ForeignKey(Promotion, null=True, blank=True, on_delete=models.SET_NULL)
+    item = models.ForeignKey(Item, null=True, blank=True, on_delete=models.SET_NULL, related_name='purchase_item')
+    chest = models.ForeignKey(Chest, null=True, blank=True, on_delete=models.SET_NULL, related_name='purchase_chest')
+    promotion = models.ForeignKey(Promotion, null=True, blank=True, on_delete=models.SET_NULL, related_name='purchase_promo')
 
     quantity = models.PositiveIntegerField(default=1)  # кол-во купленных сундуков/предметов/акций
 
