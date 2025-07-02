@@ -1,75 +1,55 @@
-import os
-import json
+import logging
 from django.core.management.base import BaseCommand
-from confluent_kafka import Consumer, KafkaException
-from apps.saga.models import SagaOrchestrator
+from apps.saga.saga_orchestrator import (
+	handle_authorization_response,
+	handle_compensation_response
+)
+from config.kafka_config import get_consumer
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "Consume saga events from Kafka and process them"
+	help = 'Kafka consumer for Saga orchestration'
 
-    def handle(self, *args, **options):
-        conf = {
-            'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092'),
-            'group.id': os.getenv('KAFKA_SAGA_GROUP', 'saga-group'),
-            'auto.offset.reset': 'earliest',
-        }
+	def handle(self, *args, **options):
+		logger.info("🚀 Starting Saga Orchestrator Consumer...")
 
-        topics = [
-            'balance-reserve-events',
-            'inventory-update-events',
-            'balance-compensate-events'
-        ]
+		consumer = None
+		try:
+			consumer = get_consumer('saga_orchestrator_group')
 
-        consumer = Consumer(conf)
-        consumer.subscribe(topics)
+			# Subscribe to both topics
+			topics = [
+				'balance-reserve-events',  # Authorization responses
+				'balance-compensate-events'  # Compensation responses
+			]
+			consumer.subscribe(topics)
 
-        self.stdout.write(f"👂 Subscribed to topics: {topics}")
+			logger.info(f"✅ Subscribed to topics: {', '.join(topics)}")
 
-        try:
-            while True:
-                msg = consumer.poll(timeout=1.0)
-                if msg is None:
-                    continue
-                if msg.error():
-                    raise KafkaException(msg.error())
+			while True:
+				msg = consumer.poll(1.0)
 
-                try:
-                    raw = msg.value().decode('utf-8')
-                    event = json.loads(raw)
-                except json.JSONDecodeError:
-                    self.stderr.write(f"⚠️  Invalid JSON, skipping: {msg.value()}")
-                    continue
+				if msg is None:
+					continue
+				if msg.error():
+					logger.error(f"Consumer error: {msg.error()}")
+					continue
 
-                topic = msg.topic()
-                transaction_id = event.get('transaction_id')
-                success = event.get('success', False)
+				# Route message to appropriate handler
+				if msg.topic() == 'balance-reserve-events':
+					handle_authorization_response(msg)
+				elif msg.topic() == 'balance-compensate-events':
+					handle_compensation_response(msg)
+				else:
+					logger.warning(f"Received message from unknown topic: {msg.topic()}")
 
-                if not transaction_id:
-                    self.stderr.write(f"⚠️  Missing transaction_id in event: {event}")
-                    continue
-
-                try:
-                    saga = SagaOrchestrator.objects.get(transaction_id=transaction_id)
-
-                    if topic == 'balance-reserve-events':
-                        saga.handle_balance_response(success, event)
-
-                    elif topic == 'inventory-update-events':
-                        saga.handle_inventory_response(success, event)
-
-                    elif topic == 'balance-compensate-events':
-                        saga.handle_compensation_response(success, event)
-
-                    self.stdout.write(f"✅ Processed event for `{transaction_id}` from topic `{topic}`")
-
-                except SagaOrchestrator.DoesNotExist:
-                    self.stderr.write(f"❌ Saga with ID `{transaction_id}` not found.")
-                except Exception as e:
-                    self.stderr.write(f"❌ Error while handling event: {e}")
-
-        except Exception as e:
-            self.stderr.write(f"❌ Kafka consumer error: {e}")
-        finally:
-            consumer.close()
-            self.stdout.write("🛑 Saga consumer closed")
+		except KeyboardInterrupt:
+			logger.info("Shutting down consumer...")
+		except Exception as e:
+			logger.error(f"Consumer error: {str(e)}", exc_info=True)
+		finally:
+			if consumer:
+				consumer.close()
+			logger.info("❌ Consumer stopped")
