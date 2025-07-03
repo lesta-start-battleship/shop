@@ -187,6 +187,18 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Конфигурация Celery
 
+# CELERY_BROKER_URL = f"redis://{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/0"
+# CELERY_RESULT_BACKEND = f"redis://{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/0"
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+# CELERY_BEAT_SCHEDULE = {
+#    'delete-expired-promotions-every-5-minutes': {
+#        'task': 'apps.promotion.tasks.delete_expired_promotions',
+#        'schedule': 300.0,  # Every 5 minutes
+#    },
+#}
+#
+# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 INVENTORY_SERVICE_URL = 'http://37.9.53.107'
 SERVICE_SECRET_KEY = 'your-secret-key-for-inter-service-auth'
