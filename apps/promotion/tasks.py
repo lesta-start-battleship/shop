@@ -1,6 +1,7 @@
 from celery import shared_task
 from django.utils.timezone import now
 from apps.promotion.models import Promotion
+from django.db.models import F 
 
 @shared_task
 def delete_expired_promotions():
