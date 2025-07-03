@@ -9,6 +9,7 @@ from apps.chest.models import Chest
 from apps.promotion.models import Promotion
 from apps.purchase.models import Purchase
 from config.kafka_config import get_producer
+from kafka.producer import send_chest_promo_purchase_kafka_event
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +159,9 @@ def handle_authorization_response(message):
                             quantity=1
                         )
                         logger.info(f"Purchase created for transaction: {transaction.id}")
+
+                        if chest and promo:
+                            send_chest_promo_purchase_kafka_event(transaction.user_id, quantity=1)
 
                     except Exception as e:
                         logger.error(f"Failed to create purchase for transaction {transaction.id}: {str(e)}")
