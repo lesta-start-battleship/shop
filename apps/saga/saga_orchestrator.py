@@ -5,6 +5,7 @@ import random
 from django.conf import settings
 from apps.saga.models import Transaction
 from config.kafka_config import get_producer
+from kafka.producer import send_chest_promo_purchase_kafka_event
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +147,7 @@ def handle_authorization_response(message):
 
 	except Exception as e:
 		logger.error(f"Error handling auth response: {str(e)}")
+
 
 
 def select_chest_reward(chest):

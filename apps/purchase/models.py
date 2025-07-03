@@ -38,12 +38,10 @@ class Purchase(models.Model):
             raise ValidationError("Ровно одно из полей item или chest должно быть заполнено.")
 
         # Проверка положительной цены
-        if self.item and self.item.cost <= 0:
-            raise ValidationError("Цена предмета должна быть положительной.")
-        if self.chest and self.chest.cost <= 0:
-            raise ValidationError("Цена сундука должна быть положительной.")
-        if self.promotion and self.promotion.price <= 0:
-            raise ValidationError("Цена акции должна быть положительной.")
+        if self.item and self.item.cost <= 0 or \
+                self.chest and self.chest.cost <= 0 or \
+                self.promotion and self.promotion.price <= 0:
+            raise ValidationError("Цена должна быть положительной.")
 
         # Проверка количества
         if self.quantity <= 0:
