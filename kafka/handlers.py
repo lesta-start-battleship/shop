@@ -98,3 +98,18 @@ def handle_auth_commit_result(event: dict):
         logger.warning(f"[Kafka] Purchase {purchase.id} -> FAILED (auth commit)")
 
     purchase.save(update_fields=["transaction_status"])
+
+
+def handle_guild_war_game(event: dict):
+    # TODO
+    """
+    test_hanlder
+    """
+    user = event.get("user_id")
+    place = event.get("place")
+
+    if not all([user, place]):
+        logger.error(f"{event}")
+        return
+
+    logger.info(f"[Kafka]  guild war game win {user} place -> {place}")

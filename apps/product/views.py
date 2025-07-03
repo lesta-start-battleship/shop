@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
 from apps.product.models import Product
-from apps.product.serializers import ProductSerializer, ProductPurchaseSerializer
+from apps.product.serializers import ProductSerializer
 from apps.saga.saga_orchestrator import start_purchase
 
 
@@ -69,7 +69,6 @@ class ItemBuyView(APIView):
 		status_url = reverse(
 			'transaction-status',
 			kwargs={'transaction_id': str(transaction.id)},
-			request=request
 		)
 
 		return Response({

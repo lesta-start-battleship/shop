@@ -16,9 +16,11 @@ KAFKA_PURCHASE_TOPIC=purchase-events
 KAFKA_TOPIC_AUTH_RESERVE=auth-reserve
 KAFKA_TOPIC_INVENTORY_ADD=inventory-add
 KAFKA_TOPIC_AUTH_COMMIT=auth-commit
+KAFKA_SCOREBOARD_TOPIC=scoreboard-events
 
-SCOREBOARD_SERVICE_URL=http://7group_IP/api/purchases/
 INVENTORY_SERVICE_URL=http://inventory/api
+
+CORS_ALLOWED_ORIGINS=http://CLI_IP:CLI_PORT
 ```
 
 # Shop Microservice

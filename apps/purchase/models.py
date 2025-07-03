@@ -6,15 +6,7 @@ from apps.product.models import Product as Item
 from apps.chest.models import Chest
 from apps.promotion.models import Promotion
 
-from .scoreboard_client import send_chest_promo_purchase_event  # новый http клиент
-
-
-class TransactionStatus(models.TextChoices):
-    PENDING = "pending", "Ожидание"
-    RESERVED = "reserved", "Баланс зарезервирован"
-    DECLINED = "declined", "Отклонено"
-    COMPLETED = "completed", "Завершено"
-    FAILED = "failed", "Ошибка"
+from kafka.producer import send_chest_promo_purchase_kafka_event
 
 
 class Purchase(models.Model):
@@ -23,17 +15,11 @@ class Purchase(models.Model):
     """
     owner = models.IntegerField()  # UID пользователя
 
-    item = models.ForeignKey(Item, null=True, blank=True, on_delete=models.SET_NULL)
-    chest = models.ForeignKey(Chest, null=True, blank=True, on_delete=models.SET_NULL)
-    promotion = models.ForeignKey(Promotion, null=True, blank=True, on_delete=models.SET_NULL)
+    item = models.ForeignKey(Item, null=True, blank=True, on_delete=models.SET_NULL, related_name='purchase_item')
+    chest = models.ForeignKey(Chest, null=True, blank=True, on_delete=models.SET_NULL, related_name='purchase_chest')
+    promotion = models.ForeignKey(Promotion, null=True, blank=True, on_delete=models.SET_NULL, related_name='purchase_promo')
 
     quantity = models.PositiveIntegerField(default=1)  # кол-во купленных сундуков/предметов/акций
-
-    transaction_status = models.CharField(
-        max_length=20,
-        choices=TransactionStatus.choices,
-        default=TransactionStatus.PENDING
-    )
 
     date = models.DateTimeField(default=timezone.now)
 
@@ -50,8 +36,6 @@ class Purchase(models.Model):
         # Проверяем, что заполнено ровно одно из item или chest
         if (self.item is None and self.chest is None) or (self.item is not None and self.chest is not None):
             raise ValidationError("Ровно одно из полей item или chest должно быть заполнено.")
-
-        # promotion может быть заполнено или нет, не влияет на проверку выше
 
         # Проверка положительной цены
         if self.item and self.item.cost <= 0:
@@ -70,6 +54,5 @@ class Purchase(models.Model):
         is_new = self.pk is None
         super().save(*args, **kwargs)
 
-        # При новой покупке сундука по акции отправляем событие в промо-сервис
         if is_new and self.chest and self.promotion:
-            send_chest_promo_purchase_event(self.owner, self.quantity)
+            send_chest_promo_purchase_kafka_event(self.owner, self.quantity)
