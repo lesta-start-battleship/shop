@@ -1,7 +1,5 @@
 import uuid
 from django.db import models
-from django.utils import timezone
-from datetime import timedelta
 
 
 class Product(models.Model):
@@ -34,20 +32,25 @@ class Product(models.Model):
 
 	@property
 	def is_available(self):
+		"""Предмет доступен для покупки, если имеет цену и не привязан к сундуку."""
 		return self.cost is not None and self.chest is None
 
 	def check_daily_purchase_limit(self, user_id):
+		"""Проверка дневного лимита покупок для этого предмета."""
 		if self.daily_purchase_limit is None:
-			return True  # Нет лимита
+			return True  # Нет индивидуального лимита
 
+		from datetime import datetime, timedelta
+		from django.utils import timezone
 		from apps.saga.models import Transaction
 
 		start_of_day = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
 		end_of_day = start_of_day + timedelta(days=1)
+
 		purchase_count = Transaction.objects.filter(
 			user_id=user_id,
 			product_id=self.id,
-			status='completed',
+			status__in=['PENDING', 'COMPLETED'],
 			created_at__gte=start_of_day,
 			created_at__lt=end_of_day
 		).count()

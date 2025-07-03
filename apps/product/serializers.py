@@ -4,21 +4,21 @@ from apps.chest.models import Chest
 from apps.promotion.models import Promotion
 
 
-class PromotionSerializer(serializers.ModelSerializer):
+class ProductPromotionSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Promotion
 		fields = ['id', 'name']
 
 
-class ChestSerializer(serializers.ModelSerializer):
+class ProductChestSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Chest
 		fields = ['id', 'name']
 
 
 class ProductSerializer(serializers.ModelSerializer):
-	chest = ChestSerializer(read_only=True, allow_null=True)
-	promotion = PromotionSerializer(read_only=True)
+	chest = ProductChestSerializer(read_only=True, allow_null=True)
+	promotion = ProductPromotionSerializer(read_only=True)
 	is_available = serializers.SerializerMethodField()
 
 	class Meta:

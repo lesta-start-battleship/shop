@@ -13,12 +13,10 @@ http_session = requests.Session()
 
 def start_purchase(user_id, amount, promotion_id=None, product_id=None, chest_id=None):
 	try:
-		# Validate user_id
 		if user_id is None:
 			logger.error("Attempted to start purchase with null user_id")
 			raise ValueError("user_id cannot be null")
 
-		# Создаем транзакцию
 		transaction = Transaction.objects.create(
 			user_id=user_id,
 			product_id=product_id,
@@ -28,20 +26,15 @@ def start_purchase(user_id, amount, promotion_id=None, product_id=None, chest_id
 			status='PENDING'
 		)
 
-		# Формируем минимальные данные для инвентаря
 		inventory_data = {
 			'user_id': user_id,
 			'amount': 1,
 			'promotion_id': promotion_id
 		}
-
-		# Добавляем специфичные данные
 		if product_id:
 			inventory_data['item_id'] = product_id
 		elif chest_id:
 			inventory_data['chest_id'] = chest_id
-
-		# Команда для сервиса авторизации через Kafka
 		auth_command = {
 			'transaction_id': str(transaction.id),
 			'user_id': user_id,
@@ -49,14 +42,10 @@ def start_purchase(user_id, amount, promotion_id=None, product_id=None, chest_id
 			'promotion_id': promotion_id,
 			'type': 'withdraw_funds'
 		}
-
 		producer = get_producer()
 		producer.produce('balance-reserve-commands', json.dumps(auth_command, ensure_ascii=False).encode('utf-8'))
-
-		# Сохраняем данные для инвентаря
 		transaction.inventory_data = inventory_data
 		transaction.save()
-
 		producer.flush()
 		logger.info(f"Started purchase transaction: {transaction.id}")
 		return transaction
@@ -105,8 +94,6 @@ def handle_authorization_response(message):
 					'Authorization': f'Service {settings.SERVICE_SECRET_KEY}',
 					'Content-Type': 'application/json'
 				}
-
-				# Construct payload explicitly
 				if transaction.product_id:
 					payload = {
 						'user_id': transaction.user_id,

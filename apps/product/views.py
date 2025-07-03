@@ -14,10 +14,9 @@ class ItemListView(generics.ListAPIView):
 	serializer_class = ProductSerializer
 
 	def get_queryset(self):
-		"""Возвращает только доступные для покупки предметы"""
 		return Product.objects.filter(
-			chest__isnull=True,  # Не входит в сундук
-			cost__isnull=False  # Имеет цену
+			chest__isnull=True,
+			cost__isnull=False
 		)
 
 
@@ -25,10 +24,9 @@ class ItemDetailView(generics.RetrieveAPIView):
 	serializer_class = ProductSerializer
 
 	def get_queryset(self):
-		"""Возвращает только доступные для покупки предметы"""
 		return Product.objects.filter(
-			chest__isnull=True,  # Не входит в сундук
-			cost__isnull=False  # Имеет цену
+			chest__isnull=True,
+			cost__isnull=False
 		)
 
 
