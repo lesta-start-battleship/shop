@@ -26,7 +26,6 @@ services:
     networks:
       - shopnet
 
-
   redis:
     image: redis:7
     restart: always
@@ -53,23 +52,6 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - shopnet
-
-
-
-  product_consumer:
-    build: .
-    command: >
-      bash -c "/wait-for-postgres.sh shop-db-1 &&
-               python manage.py run_product_consumer"
-    depends_on:
-      - shop-db-1
-      - redis
-      - shop
-    env_file:
-      - .env.prod
-    networks:
-      - shopnet
-
 
 #  celery_kafka_worker:
 #    build: .
