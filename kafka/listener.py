@@ -6,12 +6,9 @@ from confluent_kafka import Consumer, KafkaException
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from apps.purchase.models import Purchase
-from kafka.producer import send_kafka_message
-from kafka.handlers import (
-    handle_auth_reserve_result,
-    handle_inventory_result,
-    handle_auth_commit_result,
+from apps.saga.saga_orchestrator import (
+    handle_authorization_response,
+    handle_compensation_response
 )
 
 logger = logging.getLogger(__name__)
@@ -20,14 +17,13 @@ KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 GROUP_ID = os.getenv("KAFKA_CONSUMER_GROUP", "shop-service-group")
 
 TOPIC_HANDLERS = {
-    "auth-reserve-result": handle_auth_reserve_result,
-    "inventory-add-result": handle_inventory_result,
-    "auth-commit-result": handle_auth_commit_result,
+    "auth-reserve-result": handle_authorization_response,
+    "compensation-response": handle_compensation_response,
 }
 
 
 class Command(BaseCommand):
-    help = "Запуск Kafka consumer'а для обработки событий саги покупки"
+    help = "Запуск Kafka consumer'а для обработки событий"
 
     def handle(self, *args, **options):
         consumer = Consumer({

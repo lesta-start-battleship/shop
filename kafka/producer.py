@@ -6,7 +6,7 @@ from confluent_kafka import Producer
 logger = logging.getLogger(__name__)
 
 producer = Producer({
-    'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')  # поправлено на стандартный порт Kafka
+    'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
 })
 
 def delivery_report(err, msg):
