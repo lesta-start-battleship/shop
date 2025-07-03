@@ -6,7 +6,7 @@ from confluent_kafka import Consumer, KafkaException
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from apps.purchase.models import Purchase, TransactionStatus
+from apps.purchase.models import Purchase
 from kafka.producer import send_kafka_message
 from kafka.handlers import (
     handle_auth_reserve_result,

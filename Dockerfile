@@ -27,9 +27,7 @@ RUN apt-get update \
 COPY --from=build /install /usr/local
 COPY . /code
 
-COPY scripts/wait-for-postgres.sh /wait-for-postgres.sh
-RUN chmod +x /wait-for-postgres.sh
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-RUN python manage.py collectstatic --noinput
-
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
+ENTRYPOINT ["/entrypoint.sh"]
