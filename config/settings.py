@@ -182,6 +182,12 @@ CACHES = {
 # CELERY_RESULT_BACKEND = f"redis://{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/0"
 # CELERY_ACCEPT_CONTENT = ['json']
 # CELERY_TASK_SERIALIZER = 'json'
+# CELERY_BEAT_SCHEDULE = {
+#    'delete-expired-promotions-every-5-minutes': {
+#        'task': 'apps.promotion.tasks.delete_expired_promotions',
+#        'schedule': 300.0,  # Every 5 minutes
+#    },
+#}
 #
 # STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 

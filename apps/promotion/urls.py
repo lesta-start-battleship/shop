@@ -6,7 +6,7 @@ from rest_framework.routers import DefaultRouter
 from apps.promotion.views import PromotionViewSet
 
 router = DefaultRouter()
-router.register(r'promotions', PromotionViewSet, basename='promotion')
+router.register(r'', PromotionViewSet, basename='promotion')
 
 urlpatterns = [
     path('', include(router.urls)),
