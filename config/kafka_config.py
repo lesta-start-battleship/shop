@@ -1,6 +1,9 @@
 from confluent_kafka import Producer, Consumer
 
-KAFKA_BOOTSTRAP_SERVERS = "37.9.53.228:9092"
+from config.settings import env
+
+
+KAFKA_BOOTSTRAP_SERVERS = env("KAFKA_BOOTSTRAP_SERVERS")
 
 
 def get_producer():

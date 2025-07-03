@@ -1,6 +1,7 @@
 import json
 import logging
 import requests
+import random
 from django.conf import settings
 from apps.saga.models import Transaction
 from config.kafka_config import get_producer
@@ -12,6 +13,11 @@ http_session = requests.Session()
 
 def start_purchase(user_id, amount, promotion_id=None, product_id=None, chest_id=None):
 	try:
+		# Validate user_id
+		if user_id is None:
+			logger.error("Attempted to start purchase with null user_id")
+			raise ValueError("user_id cannot be null")
+
 		# Создаем транзакцию
 		transaction = Transaction.objects.create(
 			user_id=user_id,
@@ -19,7 +25,7 @@ def start_purchase(user_id, amount, promotion_id=None, product_id=None, chest_id
 			chest_id=chest_id,
 			amount=amount,
 			promotion_id=promotion_id,
-			status='pending'
+			status='PENDING'
 		)
 
 		# Формируем минимальные данные для инвентаря
@@ -90,6 +96,10 @@ def handle_authorization_response(message):
 			return
 
 		if data.get('success'):
+			transaction.status = 'RESERVED'
+			transaction.save()
+			logger.info(f"Transaction reserved: {transaction.id}")
+
 			try:
 				headers = {
 					'Authorization': f'Service {settings.SERVICE_SECRET_KEY}',
@@ -105,12 +115,17 @@ def handle_authorization_response(message):
 						'promotion_id': transaction.promotion_id
 					}
 				elif transaction.chest_id:
+					from apps.chest.models import Chest
+					chest = Chest.objects.get(id=transaction.chest_id)
+					reward = select_chest_reward(chest)
 					payload = {
 						'user_id': transaction.user_id,
 						'chest_id': transaction.chest_id,
 						'amount': 1,
-						'promotion_id': transaction.promotion_id
+						'promotion_id': transaction.promotion_id,
+						'reward': reward
 					}
+
 				else:
 					raise ValueError("Transaction must have either product_id or chest_id")
 
@@ -123,26 +138,37 @@ def handle_authorization_response(message):
 					)
 
 				if response.status_code == 200:
-					transaction.status = 'completed'
+					transaction.status = 'COMPLETED'
 					logger.info(f"Transaction completed: {transaction.id}")
 				else:
 					raise Exception(f"Inventory error: {response.status_code} - {response.text}")
 
 			except Exception as e:
 				logger.error(f"Error calling inventory service: {str(e)}")
-				transaction.status = 'failed'
+				transaction.status = 'FAILED'
 				transaction.error_message = str(e)
 				initiate_compensation(transaction)
 
 			transaction.save()
 		else:
-			transaction.status = 'failed'
+			transaction.status = 'DECLINED'
 			transaction.error_message = data.get('message', 'Authorization failed')
 			transaction.save()
-			logger.warning(f"Authorization failed for transaction: {transaction.id}")
+			logger.warning(
+				f"Authorization failed for transaction: {transaction.id}, reason: {transaction.error_message}")
 
 	except Exception as e:
 		logger.error(f"Error handling auth response: {str(e)}")
+
+
+def select_chest_reward(chest):
+	"""Select a reward based on chest's reward_distribution."""
+	if not chest.reward_distribution:
+		return None
+	choices = list(chest.reward_distribution.items())
+	reward_types = [choice[0] for choice in choices]
+	probabilities = [choice[1] for choice in choices]
+	return random.choices(reward_types, weights=probabilities, k=1)[0]
 
 
 def initiate_compensation(transaction):
@@ -158,18 +184,18 @@ def initiate_compensation(transaction):
 
 	try:
 		producer = get_producer()
-		# Отправляем команду в отдельный топик
 		producer.produce(
 			'balance-compensate-commands',
 			json.dumps(compensate_command, ensure_ascii=False).encode('utf-8')
 		)
 		producer.flush()
 
-		transaction.status = 'compensating'
+		transaction.status = 'COMPENSATING'
 		transaction.save()
 		logger.info(f"Compensation initiated for transaction: {transaction.id}")
 	except Exception as e:
 		logger.error(f"Failed to initiate compensation: {str(e)}")
+		transaction.status = 'COMPENSATION_FAILED'
 		transaction.error_message = f"Compensation failed: {str(e)}"
 		transaction.save()
 
@@ -191,10 +217,10 @@ def handle_compensation_response(message):
 			return
 
 		if data.get('success'):
-			transaction.status = 'compensated'
+			transaction.status = 'COMPENSATED'
 			logger.info(f"Transaction compensated: {transaction.id}")
 		else:
-			transaction.status = 'compensation_failed'
+			transaction.status = 'COMPENSATION_FAILED'
 			transaction.error_message = data.get('message', 'Compensation failed')
 			logger.error(f"Compensation failed for transaction: {transaction.id}")
 
