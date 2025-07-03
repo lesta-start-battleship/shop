@@ -1,46 +1,48 @@
-import os, json
+import json
 from django.core.management.base import BaseCommand
-from confluent_kafka import Consumer, KafkaException
-
+from confluent_kafka import KafkaException
 from apps.product.models import Product
+from config.settings import env
+from config.kafka_config import get_consumer
 
 
 class Command(BaseCommand):
-    help = "Consume product events from Kafka and persist to DB"
+	help = "Consume product events from Kafka and persist to DB"
 
-    def handle(self, *args, **options):
-        conf = {
-            'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS'),
-            'group.id': os.getenv('KAFKA_PRODUCT_GROUP'),
-            'auto.offset.reset': 'earliest',
-        }
-        consumer = Consumer(conf)
+	def handle(self, *args, **options):
+		topic = env("KAFKA_PRODUCT_TOPIC")
+		group_id = env("KAFKA_PRODUCT_GROUP")
 
-        topic = os.getenv('KAFKA_PRODUCT_TOPIC')
-        consumer.subscribe([topic])
-        self.stdout.write(f"👂 Listening to `{topic}` on {conf['bootstrap.servers']}")
+		consumer = get_consumer(group_id)
 
-        try:
-            while True:
-                msg = consumer.poll(timeout=1.0)
-                if msg is None:
-                    continue
-                if msg.error():
-                    raise KafkaException(msg.error())
+		consumer.subscribe([topic])
+		self.stdout.write(f"👂 Listening to `{topic}` on {env('KAFKA_BOOTSTRAP_SERVERS')}")
 
-                data = json.loads(msg.value().decode('utf-8'))
+		try:
+			while True:
+				msg = consumer.poll(timeout=1.0)
+				if msg is None:
+					continue
+				if msg.error():
+					raise KafkaException(msg.error())
 
-                product, created = Product.objects.update_or_create(
-                    name=data['name'],
-                    defaults={
-                        'description': data.get('description', ''),
-                    }
-                )
+				try:
+					data = json.loads(msg.value().decode("utf-8"))
+				except json.JSONDecodeError:
+					self.stderr.write("⚠️ Invalid JSON message, skipping.")
+					continue
 
-                self.stdout.write(f"{'✅ Created' if created else '🔄 Updated'} Product: {product.name}")
+				product, created = Product.objects.update_or_create(
+					name=data['name'],
+					defaults={
+						'description': data.get('description', ''),
+					}
+				)
 
-        except Exception as e:
-            self.stderr.write(f"❌ Consumer error: {e}")
-        finally:
-            consumer.close()
-            self.stdout.write("🛑 Consumer closed")
+				self.stdout.write(f"{'✅ Created' if created else '🔄 Updated'} Product: {product.name}")
+
+		except Exception as e:
+			self.stderr.write(f"❌ Consumer error: {e}")
+		finally:
+			consumer.close()
+			self.stdout.write("🛑 Consumer closed")

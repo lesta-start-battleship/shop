@@ -1,4 +1,5 @@
 from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -18,19 +19,27 @@ class ChestDetailView(generics.RetrieveAPIView):
 	serializer_class = ChestSerializer
 
 
-
-
-
 class ChestBuyView(APIView):
+	permission_classes = [IsAuthenticated]
+
 	def post(self, request, chest_id):
 		user = request.user
+
+		if not user.id:
+			return Response(
+				{"error": "ID пользователя отсутствует или неверный"},
+				status=status.HTTP_400_BAD_REQUEST
+			)
+
 		chest = get_object_or_404(Chest, id=chest_id)
 
-		# Проверка лимитов акции
-		if chest.promotion and not chest.promotion.check_user_limit(user.id):
-			return Response({"error": "Promotion limit exceeded"}, status=status.HTTP_400_BAD_REQUEST)
+		# Проверка индивидуального лимита только если сундук не в акции
+		if not chest.check_daily_purchase_limit(user.id):
+			return Response(
+				{"error": "Превышен дневной лимит для этого сундука"},
+				status=status.HTTP_400_BAD_REQUEST
+			)
 
-		# Запуск саги покупки
 		try:
 			transaction = start_purchase(
 				user_id=user.id,
@@ -44,7 +53,6 @@ class ChestBuyView(APIView):
 				status=status.HTTP_500_INTERNAL_SERVER_ERROR
 			)
 
-		# Generate status_url for transaction status endpoint
 		status_url = reverse(
 			'transaction-status',
 			kwargs={'transaction_id': str(transaction.id)},

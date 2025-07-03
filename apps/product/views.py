@@ -1,5 +1,6 @@
 from django.urls import reverse
 from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -32,10 +33,17 @@ class ItemDetailView(generics.RetrieveAPIView):
 
 
 class ItemBuyView(APIView):
+	permission_classes = [IsAuthenticated]
+
 	def post(self, request, item_id):
 		user = request.user
 
-		# Получаем продукт с проверкой доступности
+		if not user.id:
+			return Response(
+				{"error": "ID пользователя отсутствует или неверный"},
+				status=status.HTTP_400_BAD_REQUEST
+			)
+
 		product = get_object_or_404(
 			Product.objects.filter(
 				chest__isnull=True,
@@ -44,14 +52,13 @@ class ItemBuyView(APIView):
 			id=item_id
 		)
 
-		# Проверка лимитов акции
-		if product.promotion and not product.promotion.check_user_limit(user.id):
+		# Проверка индивидуального лимита только если предмет не в акции
+		if not product.check_daily_purchase_limit(user.id):
 			return Response(
-				{"error": "Promotion limit exceeded"},
+				{"error": "Превышен дневной лимит для этого предмета"},
 				status=status.HTTP_400_BAD_REQUEST
 			)
 
-		# Запуск саги покупки
 		try:
 			transaction = start_purchase(
 				user_id=user.id,
@@ -65,7 +72,6 @@ class ItemBuyView(APIView):
 				status=status.HTTP_500_INTERNAL_SERVER_ERROR
 			)
 
-		# Generate status_url for transaction status endpoint
 		status_url = reverse(
 			'transaction-status',
 			kwargs={'transaction_id': str(transaction.id)},
