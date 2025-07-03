@@ -13,15 +13,7 @@ echo "🟢 PostgreSQL is up"
 
 echo "🔧 Applying migrations..."
 python manage.py makemigrations --noinput
-
-echo "🔧 Applying migrations..."
 python manage.py migrate --noinput
-
-echo "🔄 Starting saga consumer..."
-python manage.py run_saga_consumer &
-
-echo "🔄 Starting product consumer..."
-python manage.py run_product_consumer &
 
 echo "🎯 Collecting static files..."
 python manage.py collectstatic --noinput

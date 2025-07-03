@@ -20,7 +20,6 @@ services:
     depends_on:
       - shop-db-1
       - redis
-      - kafka
     env_file:
       - .env.prod
     networks:
@@ -32,41 +31,21 @@ services:
     networks:
       - shopnet
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.3.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-    networks:
-      - shopnet
-
-  kafka:
-    image: confluentinc/cp-kafka:7.3.0
+  celery_kafka_worker:
+    build: .
+    entrypoint: [""]
+    command: >
+      bash -c "celery -A config worker --loglevel=info"
     depends_on:
-      - zookeeper
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      - shop-db-1
+      - redis
+      - shop
+    volumes:
+      - static_volume:/code/staticfiles
+    env_file:
+      - .env.prod
     networks:
       - shopnet
-
-#  celery_kafka_worker:
-#    build: .
-#    command: >
-#      bash -c "celery -A config worker --loglevel=info"
-#    depends_on:
-#      - shop-db-1
-#      - redis
-#      - shop
-#    volumes:
-#      - static_volume:/code/staticfiles
-#    env_file:
-#      - .env.prod
-#    networks:
-#      - shopnet
 
 volumes:
   postgres_data:
