@@ -4,6 +4,7 @@ import requests
 import random
 from django.conf import settings
 from apps.saga.models import Transaction
+from apps.promotion.external import InventoryService
 from confluent_kafka import Producer
 from apps.purchase.models import Purchase
 from prometheus_metrics import (
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 http_session = requests.Session()
 
 
-def start_purchase(user_id, amount, promotion_id=None, product_id=None, chest_id=None):
+def start_purchase(user_id, amount, currency_type, promotion_id=None, product_id=None, chest_id=None):
 	try:
 		if user_id is None:
 			logger.error("Attempted to start purchase with null user_id")
@@ -38,24 +39,30 @@ def start_purchase(user_id, amount, promotion_id=None, product_id=None, chest_id
 			product_id=product_id,
 			chest_id=chest_id,
 			amount=amount,
+			currency_type=currency_type,  # Added currency_type
 			promotion_id=promotion_id,
 			status='PENDING'
 		)
 
+
 		inventory_data = {
 			'user_id': user_id,
 			'amount': 1,
-			'promotion_id': promotion_id
+			'promotion_id': promotion_id,
+			'currency_type': currency_type  # Added to inventory data
 		}
 		if product_id:
 			inventory_data['item_id'] = product_id
 		elif chest_id:
 			inventory_data['chest_id'] = chest_id
+
 		auth_command = {
 			'transaction_id': str(transaction.id),
 			'user_id': user_id,
 			'amount': amount,
+			'currency_type': currency_type
 		}
+
 		producer = get_producer()
 		producer.produce('balance-reserve-commands', json.dumps(auth_command, ensure_ascii=False).encode('utf-8'))
 		transaction.inventory_data = inventory_data
@@ -113,7 +120,8 @@ def handle_authorization_response(message):
 						'user_id': transaction.user_id,
 						'item_id': transaction.product_id,
 						'amount': 1,
-						'promotion_id': transaction.promotion_id
+						'promotion_id': transaction.promotion_id,
+						'currency_type': transaction.currency_type  # Added
 					}
 				elif transaction.chest_id:
 					from apps.chest.models import Chest
@@ -124,7 +132,8 @@ def handle_authorization_response(message):
 						'chest_id': transaction.chest_id,
 						'amount': 1,
 						'promotion_id': transaction.promotion_id,
-						'reward': reward
+						'reward': reward,
+						'currency_type': transaction.currency_type  # Added
 					}
 
 				else:
@@ -196,6 +205,7 @@ def initiate_compensation(transaction):
 		'transaction_id': str(transaction.id),
 		'user_id': transaction.user_id,
 		'amount': transaction.amount,
+		'currency_type': transaction.currency_type  # Added currency_type
 	}
 
 	try:
@@ -244,3 +254,45 @@ def handle_compensation_response(message):
 
 	except Exception as e:
 		logger.error(f"Error processing compensation: {str(e)}", exc_info=True)
+  
+def publish_promotion_compensation(user_id : int, amount : int, item_id : int, role=None, currency="gold"):
+    event = {
+        "user_id": user_id,
+        "amount": amount,
+        "currency": currency,
+        "item_id": item_id,
+    }
+
+    if role:
+        event["role"] = role
+
+    try:
+        producer = get_producer()
+        producer.produce(
+            'promotion.compensation.commands',
+            json.dumps(event, ensure_ascii=False).encode('utf-8')
+        )
+        producer.flush()
+        logger.info(f"Compensation event sent for user {user_id}, amount {amount} {currency}")
+    except Exception as e:
+        logger.error(f"Failed to publish compensation event: {str(e)}")
+        
+def handle_promotion_compensation_response(message):
+    try:
+        data = safe_json_parse(message)
+        if not data:
+            logger.warning("Invalid compensation response")
+            return
+
+        success = data.get("success")
+        user_id = data.get("user_id")
+        item_id = data.get("item_id")
+
+        if success:
+            InventoryService.delete_item(item_id)
+            logger.info(f"Deleted item {item_id} after successful compensation for user {user_id}")
+        else:
+            logger.error(f"Compensation failed for user {user_id}, item {item_id}, reason: {data.get('message')}")
+
+    except Exception as e:
+        logger.error(f"Error processing compensation response: {str(e)}", exc_info=True)
