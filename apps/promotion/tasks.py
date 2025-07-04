@@ -20,3 +20,14 @@ def check_and_compensate_expired_promotions():
             logger.info(f"Successfully compensated {count} items for Promotion ID: {promo.id}")
         except Exception as e:
             logger.error(f"Error compensating Promotion ID {promo.id}: {str(e)}", exc_info=True)
+            
+@shared_task
+def clean_up_expired_promotions():
+    expired_promotions = Promotion.objects.filter(
+        end_time__lte=timezone.now(),
+        compensation_done=True  # Ensure compensation finished
+    )
+
+    for promo in expired_promotions:
+        logger.info(f"Deleting expired and compensated promotion ID {promo.id} - {promo.name}")
+        promo.delete()

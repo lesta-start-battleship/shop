@@ -17,10 +17,56 @@ class PromotionViewSet(ModelViewSet):
     serializer_class = PromotionSerializer
     permission_classes = [IsAdminUser]
     
-    
-    @swagger_auto_schema(operation_description="Compensate unopened chests for this promotion.")
+    @swagger_auto_schema(
+        operation_summary="List all promotions",
+        operation_description="Returns a list of all promotions available in the system.",
+        responses={200: PromotionSerializer(many=True)}
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary="Retrieve a promotion",
+        operation_description="Returns detailed information about a specific promotion by its ID.",
+        responses={200: PromotionSerializer}
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary="Create a new promotion",
+        operation_description="Creates a new promotion with the specified parameters.",
+        responses={201: PromotionSerializer}
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary="Update a promotion",
+        operation_description="Updates the details of an existing promotion.",
+        responses={200: PromotionSerializer}
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary="Delete a promotion",
+        operation_description="Deletes a promotion by its ID.",
+        responses={204: "No Content"}
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary="Compensate unopened chests",
+        operation_description="Compensates unopened chests and unused items for this promotion. Can only be triggered if promotion has ended.",
+        responses={
+            200: "Compensation completed successfully.",
+            400: "Promotion is still active or already compensated."
+        }
+    )
     @action(detail=True, methods=["post"], permission_classes=[IsAdminUser])
-    def compensate(self, request):
+    def compensate(self, request, pk=None):
         promotion = self.get_object()
         try:
             count = compensate_promotion(promotion)
