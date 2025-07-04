@@ -4,6 +4,7 @@ import requests
 import random
 from django.conf import settings
 from apps.saga.models import Transaction
+from apps.promotion.external import InventoryService
 from confluent_kafka import Producer
 
 from config.settings import env
@@ -226,3 +227,45 @@ def handle_compensation_response(message):
 
 	except Exception as e:
 		logger.error(f"Error processing compensation: {str(e)}", exc_info=True)
+  
+def publish_promotion_compensation(user_id : int, amount : int, item_id : int, role=None, currency="gold"):
+    event = {
+        "user_id": user_id,
+        "amount": amount,
+        "currency": currency,
+        "item_id": item_id,
+    }
+
+    if role:
+        event["role"] = role
+
+    try:
+        producer = get_producer()
+        producer.produce(
+            'promotion.compensation.commands',
+            json.dumps(event, ensure_ascii=False).encode('utf-8')
+        )
+        producer.flush()
+        logger.info(f"Compensation event sent for user {user_id}, amount {amount} {currency}")
+    except Exception as e:
+        logger.error(f"Failed to publish compensation event: {str(e)}")
+        
+def handle_promotion_compensation_response(message):
+    try:
+        data = safe_json_parse(message)
+        if not data:
+            logger.warning("Invalid compensation response")
+            return
+
+        success = data.get("success")
+        user_id = data.get("user_id")
+        item_id = data.get("item_id")
+
+        if success:
+            InventoryService.delete_item(item_id)
+            logger.info(f"Deleted item {item_id} after successful compensation for user {user_id}")
+        else:
+            logger.error(f"Compensation failed for user {user_id}, item {item_id}, reason: {data.get('message')}")
+
+    except Exception as e:
+        logger.error(f"Error processing compensation response: {str(e)}", exc_info=True)
