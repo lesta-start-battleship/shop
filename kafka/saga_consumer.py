@@ -25,8 +25,8 @@ def start_saga_consumer():
 	logger.info("🚀 Starting Saga Orchestrator Consumer...")
 
 	SAGA_TOPICS = [
-		'balance-reserve-events',  # Authorization responses
-		'balance-compensate-events'  # Compensation responses
+		'balance-responses',  # Authorization responses
+		'compensation-responses'  # Compensation responses
 	]
 
 	consumer = None
@@ -47,10 +47,9 @@ def start_saga_consumer():
 				continue
 
 			try:
-				event = json.loads(msg.value().decode('utf-8'))
-				if msg.topic() == 'balance-reserve-events':
+				if msg.topic() == 'balance-responses':
 					handle_authorization_response(msg)
-				elif msg.topic() == 'balance-compensate-events':
+				elif msg.topic() == 'compensation-responses':
 					handle_compensation_response(msg)
 
 			except json.JSONDecodeError:
