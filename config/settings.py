@@ -142,9 +142,9 @@ USE_TZ = True
 # TODO delete or change before prod
 REST_FRAMEWORK = {
 	'DEFAULT_AUTHENTICATION_CLASSES': [
-		'rest_framework_simplejwt.authentication.JWTAuthentication',
-		# 'rest_framework.authentication.SessionAuthentication',
-		# 'rest_framework.authentication.BasicAuthentication',
+		# 'rest_framework_simplejwt.authentication.JWTAuthentication',
+		'rest_framework.authentication.SessionAuthentication',
+		'rest_framework.authentication.BasicAuthentication',
 	],
 	'DEFAULT_PERMISSION_CLASSES': [
 		# 'rest_framework.permissions.AllowAny',
@@ -172,10 +172,10 @@ CELERY_RESULT_BACKEND = f"redis://{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PO
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-
-INVENTORY_SERVICE_URL = 'http://37.9.53.107'
+# INVENTORY_SERVICE_URL = 'http://37.9.53.107'
+INVENTORY_SERVICE_URL = 'https://shop-inventory.free.beeceptor.com'
+AUTH_SERVICE_URL = 'https://shop-inventory.free.beeceptor.com'
 SERVICE_SECRET_KEY = 'your-secret-key-for-inter-service-auth'
+KAFKA_CHEST_EVENTS_TOPIC = 'guild.wars.results'
 
-
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

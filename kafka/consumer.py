@@ -54,7 +54,8 @@ def start_kafka_consumer():
                 logger.info(f"[Kafka] start_kafka_consumer() here")
                 logger.info(f"[Kafka] Received message on topic {topic}: {event}")
                 if topic.endswith("guild.wars.results"):
-                    handle_guild_war_game(event)
+                    # handle_guild_war_game(event)
+                    ...
                 elif topic.endswith("shop.inventory.updates"):
                     handle_inventory_update(event)
                 else:

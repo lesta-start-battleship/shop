@@ -14,13 +14,6 @@ class Product(models.Model):
 		null=True,
 		related_name='products'
 	)
-	chest = models.ForeignKey(
-		"chest.Chest",
-		on_delete=models.SET_NULL,
-		blank=True,
-		null=True,
-		related_name='products_in_chest'
-	)
 	daily_purchase_limit = models.PositiveIntegerField(
 		null=True,
 		blank=True,
