@@ -1,7 +1,7 @@
 from celery import shared_task
 
-
 from kafka.consumer import start_kafka_consumer
+from kafka.saga_consumer import start_saga_consumer
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,3 +17,9 @@ def process_kafka_messages(self):
 		self.retry(exc=exc)
 
 
+
+@shared_task
+def process_saga_messages():
+	"""Celery task to run the saga consumer"""
+	logger.info("Starting saga consumer via Celery...")
+	start_saga_consumer()
