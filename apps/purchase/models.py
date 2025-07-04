@@ -6,8 +6,6 @@ from apps.product.models import Product as Item
 from apps.chest.models import Chest
 from apps.promotion.models import Promotion
 
-from kafka.producer import send_chest_promo_purchase_kafka_event
-
 
 class Purchase(models.Model):
     """
@@ -49,8 +47,4 @@ class Purchase(models.Model):
 
     def save(self, *args, **kwargs):
         self.full_clean()
-        is_new = self.pk is None
         super().save(*args, **kwargs)
-
-        if is_new and self.chest and self.promotion:
-            send_chest_promo_purchase_kafka_event(self.owner, self.quantity)

@@ -9,6 +9,12 @@ services:
     networks:
       - shopnet
 
+  redis:
+    image: redis:7
+    restart: always
+    networks:
+      - shopnet
+
   shop:
     build:
       context: .
@@ -17,42 +23,45 @@ services:
       - "8000:8000"
     volumes:
       - static_volume:/code/staticfiles
+      - ./entrypoint.sh:/entrypoint.sh
     depends_on:
       - shop-db-1
       - redis
     env_file:
       - .env.prod
-    networks:
-      - shopnet
-
-  redis:
-    image: redis:7
-    restart: always
+    entrypoint: ["/entrypoint.sh"]
+    command: ["gunicorn"]
     networks:
       - shopnet
 
   celery_kafka_worker:
     build: .
-    entrypoint: [""]
-    command: >
-      bash -c "celery -A config worker --loglevel=info"
+    volumes:
+      - static_volume:/code/staticfiles
+      - ./entrypoint.sh:/entrypoint.sh
     depends_on:
       - shop-db-1
       - redis
       - shop
-    volumes:
-      - static_volume:/code/staticfiles
     env_file:
       - .env.prod
+    entrypoint: ["/entrypoint.sh"]
+    command: ["celery"]
     networks:
       - shopnet
 
-  prometheus:
-    image: prom/prometheus
+  celery-beat:
+    build: .
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
+      - .:/app
+      - ./entrypoint.sh:/entrypoint.sh
+    depends_on:
+      - redis
+      - shop-db-1
+    env_file:
+      - .env.prod
+    entrypoint: ["/entrypoint.sh"]
+    command: ["beat"]
     networks:
       - shopnet
 

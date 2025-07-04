@@ -39,3 +39,4 @@ wcwidth==0.2.13
 whitenoise==6.9.0
 django-cors-headers>=4.0
 django-prometheus==2.4.1
+django-celery-beat==2.8.1
