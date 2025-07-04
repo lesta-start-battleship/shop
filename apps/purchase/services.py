@@ -3,7 +3,6 @@ from apps.purchase.models import Purchase
 from apps.product.models import Product
 from apps.chest.models import Chest
 from apps.promotion.models import Promotion
-from kafka.producer import send_chest_promo_purchase_kafka_event
 
 
 def create_purchase(owner_id: int, item_id=None, chest_id=None, promotion_id=None, quantity=1) -> Purchase:
@@ -38,9 +37,5 @@ def create_purchase(owner_id: int, item_id=None, chest_id=None, promotion_id=Non
         promotion=promotion,
         quantity=quantity,
     )
-
-    # Если куплен сундук в рамках акции — отправляем событие в Kafka
-    if chest and promotion:
-        send_chest_promo_purchase_kafka_event(owner_id, quantity)
 
     return purchase

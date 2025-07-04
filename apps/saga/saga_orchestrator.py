@@ -6,6 +6,15 @@ from django.conf import settings
 from apps.saga.models import Transaction
 from apps.promotion.external import InventoryService
 from confluent_kafka import Producer
+from apps.purchase.models import Purchase
+from prometheus_metrics import (
+    gold_spent_total,
+    successful_purchases_total,
+    failed_purchases_total,
+    successful_chest_purchases_total,
+    successful_product_purchases_total,
+    successful_promo_purchases_total,
+)
 
 from config.settings import env
 
@@ -141,6 +150,24 @@ def handle_authorization_response(message):
 				if response.status_code == 200:
 					transaction.status = 'COMPLETED'
 					logger.info(f"Transaction completed: {transaction.id}")
+					purchase = Purchase.objects.create(
+						owner=transaction.user_id,
+						item_id=transaction.product_id,
+						chest_id=transaction.chest_id,
+						promotion_id=transaction.promotion_id,
+						quantity=1
+					)
+					# Метрики
+					gold_spent_total.inc(transaction.amount)
+					successful_purchases_total.inc()
+
+					if transaction.chest_id:
+						successful_chest_purchases_total.inc()
+					if transaction.product_id:
+						successful_product_purchases_total.inc()
+					if transaction.promotion_id is not None:
+						successful_promo_purchases_total.inc()
+					logger.info(f"✅ Purchase created after successful transaction: {purchase}")
 				else:
 					raise Exception(f"Inventory error: {response.status_code} - {response.text}")
 
