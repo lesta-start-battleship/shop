@@ -29,17 +29,16 @@ def start_purchase(user_id, amount, currency_type, promotion_id=None, product_id
 			product_id=product_id,
 			chest_id=chest_id,
 			amount=amount,
-			currency_type=currency_type,  # Added currency_type
+			currency_type=currency_type,
 			promotion_id=promotion_id,
 			status='PENDING'
 		)
-
 
 		inventory_data = {
 			'user_id': user_id,
 			'amount': 1,
 			'promotion_id': promotion_id,
-			'currency_type': currency_type  # Added to inventory data
+			'currency_type': currency_type
 		}
 		if product_id:
 			inventory_data['item_id'] = product_id
@@ -151,11 +150,28 @@ def handle_authorization_response(message):
 
 			transaction.save()
 		else:
+			error_code = data.get('code', 'authorization_failed')
+			default_message = 'Authorization failed'
+
+			error_messages = {
+				'insufficient_funds': 'Not enough money in account',
+				'invalid_credentials': 'Invalid payment credentials',
+				'limit_exceeded': 'Daily spending limit exceeded',
+				'authorization_failed': default_message
+			}
+
 			transaction.status = 'DECLINED'
-			transaction.error_message = data.get('message', 'Authorization failed')
+			transaction.error_message = data.get(
+				'message',
+				error_messages.get(error_code, default_message)
+			)
 			transaction.save()
+
 			logger.warning(
-				f"Authorization failed for transaction: {transaction.id}, reason: {transaction.error_message}")
+				f"Authorization failed for transaction {transaction.id}. "
+				f"Reason: {transaction.error_message}. "
+				f"Error code: {error_code}"
+			)
 
 	except Exception as e:
 		logger.error(f"Error handling auth response: {str(e)}")
@@ -172,12 +188,11 @@ def select_chest_reward(chest):
 
 
 def initiate_compensation(transaction):
-	"""Инициирует компенсационную транзакцию через Kafka"""
 	compensate_command = {
 		'transaction_id': str(transaction.id),
 		'user_id': transaction.user_id,
 		'amount': transaction.amount,
-		'currency_type': transaction.currency_type  # Added currency_type
+		'currency_type': transaction.currency_type
 	}
 
 	try:
@@ -199,7 +214,6 @@ def initiate_compensation(transaction):
 
 
 def handle_compensation_response(message):
-	"""Process compensation response from balance service"""
 	try:
 		data = safe_json_parse(message)
 		if not data:

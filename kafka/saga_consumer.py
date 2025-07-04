@@ -12,22 +12,20 @@ logger = logging.getLogger(__name__)
 
 
 def get_saga_consumer():
-	"""Create dedicated consumer for Saga topics"""
 	return Consumer({
 		'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092'),
 		'group.id': 'saga-orchestrator-group',
 		'auto.offset.reset': 'earliest'
 	})
 
+SAGA_TOPICS = [
+		'balance-responses',
+		'compensation-responses'
+	]
+
 
 def start_saga_consumer():
-	"""Main consumer function for Saga events only"""
 	logger.info("🚀 Starting Saga Orchestrator Consumer...")
-
-	SAGA_TOPICS = [
-		'balance-responses',  # Authorization responses
-		'compensation-responses'  # Compensation responses
-	]
 
 	consumer = None
 	try:

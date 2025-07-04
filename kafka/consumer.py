@@ -8,15 +8,9 @@ from kafka.handlers import (
 handle_inventory_update
 )
 
-# from apps.saga.saga_orchestrator import (
-#     handle_authorization_response
-# )
-
 logger = logging.getLogger(__name__)
 
 TOPICS = [
-    os.getenv('KAFKA_TOPIC_AUTH_RESERVE_RESULT', 'balance-reserve-events'),
-    os.getenv('KAFKA_TOPIC_AUTH_COMMIT_RESULT', 'balance-compensate-events'),
     os.getenv('KAFKA_PURCHASE_TOPIC', 'guild.wars.results'),
     os.getenv("KAFKA_SCOREBOARD_TOPIC", "scoreboard-events"),
     os.getenv("KAFKA_TOPIC_INVENTORY_UPDATES", "shop.inventory.updates"),
