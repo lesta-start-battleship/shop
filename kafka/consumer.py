@@ -53,13 +53,7 @@ def start_kafka_consumer():
                 topic = msg.topic()
                 logger.info(f"[Kafka] start_kafka_consumer() here")
                 logger.info(f"[Kafka] Received message on topic {topic}: {event}")
-
-                if topic.endswith("auth-reserve-result"):
-                    pass
-                    # handle_authorization_response(event)
-                # elif topic.endswith("auth-commit-result"):
-                #     handle_auth_commit_result(event)
-                elif topic.endswith("guild.wars.results"):
+                if topic.endswith("guild.wars.results"):
                     handle_guild_war_game(event)
                 elif topic.endswith("shop.inventory.updates"):
                     handle_inventory_update(event)

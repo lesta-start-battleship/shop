@@ -136,19 +136,7 @@ TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
 USE_TZ = True
 
-# 	'DEFAULT_AUTHENTICATION_CLASSES': [
-# 		'rest_framework_simplejwt.authentication.JWTAuthentication',
-# 		# 'config.authentication.AuthServiceAuthentication',
-# 		'config.authentication.XUserIDAuthentication',
-# 	],
-# 	'DEFAULT_PERMISSION_CLASSES': [
-# 		'rest_framework.permissions.IsAuthenticated',
-# 	],
-# 	'DEFAULT_THROTTLE_RATES': {
-# 		'anon': '50/min',
-# 		'user': '50/min'
-# 	}
-# }
+
 
 # TODO delete or change before prod
 REST_FRAMEWORK = {
@@ -185,20 +173,6 @@ CELERY_TASK_SERIALIZER = 'json'
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Конфигурация Celery
-
-# CELERY_BROKER_URL = f"redis://{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/0"
-# CELERY_RESULT_BACKEND = f"redis://{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/0"
-# CELERY_ACCEPT_CONTENT = ['json']
-# CELERY_TASK_SERIALIZER = 'json'
-# CELERY_BEAT_SCHEDULE = {
-#    'delete-expired-promotions-every-5-minutes': {
-#        'task': 'apps.promotion.tasks.delete_expired_promotions',
-#        'schedule': 300.0,  # Every 5 minutes
-#    },
-#}
-#
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 INVENTORY_SERVICE_URL = 'http://37.9.53.107'
 SERVICE_SECRET_KEY = 'your-secret-key-for-inter-service-auth'
