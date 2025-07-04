@@ -13,6 +13,7 @@ DEBUG = env('DEBUG')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost'])
 
 INV_SERVICE_URL = env('INVENTORY_SERVICE_URL', default="service")
+AUTH_SERVICE_URL = env('AUTH_SERVICE_URL', default="auth")
 
 # CORS_ALLOW_ALL_ORIGINS = False
 # CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
