@@ -30,6 +30,7 @@ INSTALLED_APPS = [
 	'django.contrib.staticfiles',
 	'rest_framework',
 	'corsheaders',
+	'django_prometheus',
 
 	# Кастомные
 	'apps.product.apps.ProductConfig',
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+	'django_prometheus.middleware.PrometheusBeforeMiddleware',
 	'django.middleware.security.SecurityMiddleware',
 	'whitenoise.middleware.WhiteNoiseMiddleware',
 	'django.contrib.sessions.middleware.SessionMiddleware',
@@ -50,6 +52,7 @@ MIDDLEWARE = [
 	'django.contrib.messages.middleware.MessageMiddleware',
 	'django.middleware.clickjacking.XFrameOptionsMiddleware',
 	'corsheaders.middleware.CorsMiddleware',
+	'django_prometheus.middleware.PrometheusBeforeMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
