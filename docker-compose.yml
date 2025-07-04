@@ -47,7 +47,7 @@ services:
     networks:
       - shopnet
 
- prometheus:
+  prometheus:
     image: prom/prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
