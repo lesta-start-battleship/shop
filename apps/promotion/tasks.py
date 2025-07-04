@@ -1,15 +1,22 @@
 from celery import shared_task
-from django.utils.timezone import now
-from apps.promotion.models import Promotion
-from django.db.models import F 
+from django.utils import timezone
+from .models import Promotion
+from .services import compensate_promotion
+import logging
+
+logger = logging.getLogger(__name__)
 
 @shared_task
-def delete_expired_promotions():
-    current_time = now()
-    expired_promos = Promotion.objects.filter(
-        start_time__lte=current_time - F('duration')
-    )
-
-    count = expired_promos.count()
-    expired_promos.delete()
-    return f"Deleted {count} expired promotions"
+def check_and_compensate_expired_promotions():
+    logger.info("Started compensation check for expired promotions.")
+    
+    expired_promos = Promotion.objects.filter(end_date__lt=timezone.now(), compensation_done=False)
+    
+    for promo in expired_promos:
+        logger.info(f"Processing compensation for Promotion ID: {promo.id} - {promo.name}")
+        
+        try:
+            count = compensate_promotion(promo)
+            logger.info(f"Successfully compensated {count} items for Promotion ID: {promo.id}")
+        except Exception as e:
+            logger.error(f"Error compensating Promotion ID {promo.id}: {str(e)}", exc_info=True)

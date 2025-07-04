@@ -1,101 +1,45 @@
 import logging
-import requests
-from django.conf import settings
 logger = logging.getLogger(__name__)
 
-INV_SERVICE_URL = settings.INV_SERVICE_URL
 
+from .external import InventoryService, AuthService
 
-def promotion_has_ended(promotion):
-    from django.utils.timezone import now
-    return now() > (promotion.start_time + promotion.duration)
-  
-  
-def fetch_chest_data(chest_id):
-    """
-    Retrieves chest details from Inventory Service.
-    """
-    
-    endpoint = f"{INV_SERVICE_URL}/chest/{chest_id}/"
-    
-    try:
-        response = requests.get(endpoint, timeout=5)
-        
-        if response.status_code != 200:
-            logger.error(f"Failed to fetch chest {chest_id}: {response.text}")
-            raise Exception("Chest not found or Inventory service error")
+def compensate_promotion(promotion):
+    if not promotion.has_ended():
+        raise ValueError("Promotion is still active.")
+    if promotion.compensation_done:
+        raise ValueError("Already compensated.")
 
-        return response.json()
-    
-    except requests.RequestException as e:
-        logger.exception("Error fetching chest details from Inventory service")
-        raise Exception("Failed to communicate with Inventory service") from e
-    
-    
-def calculate_gold_for_chest(chest_id):
-    """
-    Fetches chest details and returns compensation value.
-    """
-    data = fetch_chest_data(chest_id)
-    
-    gold_amount = data.get("compensation_value", 50)
-    logger.debug(f"Chest {chest_id} compensation_value: {gold_amount}")
-    
-    return gold_amount
+    logger.info(f"Starting compensation for Promotion ID {promotion.id}")
 
-
-def credit_gold(player_id, gold_amount):
-    """
-    Sends request to Inventory service to credit gold to a player.
-    """
-    endpoint = f"{INV_SERVICE_URL}/credit/"
-    
-    payload = {
-        "player_id": player_id,
-        "amount": gold_amount,
-        "reason": "Promotion Chest Compensation"
-    } # заглушка
-    
-    logger.info(f"Crediting {gold_amount} gold to player {player_id}")
-    
-    try:
-        response = requests.post(endpoint, json=payload, timeout=5)
-        
-        if response.status_code != 200:
-            logger.error(f"Failed to credit gold: {response.text}")
-            raise Exception("Inventory service responded with an error")
-        
-        logger.debug(f"Gold successfully credited to player {player_id}")
-
-    except requests.RequestException as e:
-        logger.exception("Error communicating with Inventory service")
-        raise Exception("Failed to communicate with Inventory service") from e
-
-
-def compensate_unopened_chests(promotion):
-    """
-    Compensates all unopened, un-compensated chests from a specific promotion.
-    """
-    from apps.purchase.models import Purchase  # Local import to avoid circular dependency
-    
-    purchases = Purchase.objects.filter(
-        promotion_id=promotion.id,
-        chest_id__isnull=False,
-        chest_opened=False,
-        compensated=False
+    item_ids = list(promotion.chests.values_list('id', flat=True)) + list(
+        promotion.products.values_list('id', flat=True)
     )
 
-    count = 0
-    
-    for purchase in purchases:
-        gold_amount = calculate_gold_for_chest(purchase.chest_id)
-        credit_gold(purchase.owner, gold_amount)
+    total_compensated = 0
+    for item_id in item_ids:
+        logger.info(f"Processing item ID {item_id} for compensation.")
 
-        purchase.compensated = True
-        purchase.save()
-        count += 1
+        inventories = InventoryService.get_inventories_with_item(item_id)
 
-    logger.info(f"Compensated {count} unopened chests for promotion {promotion.id}")
-    return count
+        for inv in inventories:
+            user_id = inv['user_id']
+            quantity = inv['quantity']
+            amount = quantity * 100  # Example
+
+            logger.debug(f"Compensating user {user_id} with {amount} gold for item {item_id} (quantity: {quantity})")
+
+            AuthService.compensate_balance(user_id, amount, "gold")
+            total_compensated += quantity
+
+        InventoryService.delete_item(item_id)
+        logger.info(f"Deleted item {item_id} from inventory after compensation.")
+
+    promotion.compensation_done = True
+    promotion.save()
+
+    logger.info(f"Completed compensation for Promotion ID {promotion.id}, total items compensated: {total_compensated}")
+
+    return total_compensated
 
 
