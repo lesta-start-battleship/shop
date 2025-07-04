@@ -12,6 +12,7 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 INVENTORY_API_URL = settings.INVENTORY_SERVICE_URL
+AUTH_API_URL = settings.AUTH_SERVICE_URL
 
 
 @shared_task(bind=True, max_retries=3)
@@ -91,7 +92,7 @@ def send_to_user_service(self, result_data, token):
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
-    inventory_response_url = f"{INVENTORY_API_URL}/api/v1/currencies/"
+    inventory_response_url = f"{AUTH_API_URL}/api/v1/currencies/"
     try:
         gold = result_data.get("gold", 0)
         if gold > 0:

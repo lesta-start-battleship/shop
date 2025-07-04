@@ -172,9 +172,8 @@ CELERY_RESULT_BACKEND = f"redis://{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PO
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
-# INVENTORY_SERVICE_URL = 'http://37.9.53.107'
-INVENTORY_SERVICE_URL = 'https://shop-inventory.free.beeceptor.com'
-AUTH_SERVICE_URL = 'https://shop-inventory.free.beeceptor.com'
+INVENTORY_SERVICE_URL = 'http://37.9.53.107'
+AUTH_SERVICE_URL = ''
 SERVICE_SECRET_KEY = 'your-secret-key-for-inter-service-auth'
 KAFKA_CHEST_EVENTS_TOPIC = 'guild.wars.results'
 
