@@ -10,10 +10,7 @@ from rest_framework.reverse import reverse
 
 class TransactionStatusView(APIView):
 	permission_classes = [IsAuthenticated]
-
-	# Таймаут long-polling в секундах
 	POLLING_TIMEOUT = 5
-
 	def get(self, request, *args, **kwargs):
 		# Получаем transaction_id из параметров запроса
 		transaction_id = request.query_params.get('transaction_id') or kwargs.get('transaction_id')
@@ -23,9 +20,7 @@ class TransactionStatusView(APIView):
 				{"error": "transaction_id parameter is required"},
 				status=status.HTTP_400_BAD_REQUEST
 			)
-
 		try:
-			# Проверяем, что транзакция принадлежит текущему пользователю
 			transaction = Transaction.objects.get(
 				id=transaction_id,
 				user_id=request.user.id
@@ -70,9 +65,7 @@ class TransactionStatusView(APIView):
 					"data": transaction.inventory_data,
 				})
 
-			time.sleep(0.5)  # Ждем перед следующей проверкой
-
-		# Если время ожидания истекло
+			time.sleep(0.5)
 		return Response({
 			"status": transaction.status,
 			"message": "Transaction still processing",

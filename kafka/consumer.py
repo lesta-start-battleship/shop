@@ -5,19 +5,22 @@ from confluent_kafka import Consumer, KafkaError
 
 from kafka.handlers import (
     handle_guild_war_game,
+handle_inventory_update
 )
 
-from apps.saga.saga_orchestrator import (
-    handle_authorization_response
-)
+# from apps.saga.saga_orchestrator import (
+#     handle_authorization_response
+# )
 
 logger = logging.getLogger(__name__)
 
 TOPICS = [
-    os.getenv('KAFKA_TOPIC_AUTH_RESERVE_RESULT', 'auth-reserve-result'),
-    os.getenv('KAFKA_TOPIC_AUTH_COMMIT_RESULT', 'auth-commit-result'),
+    os.getenv('KAFKA_TOPIC_AUTH_RESERVE_RESULT', 'balance-reserve-events'),
+    os.getenv('KAFKA_TOPIC_AUTH_COMMIT_RESULT', 'balance-compensate-events'),
     os.getenv('KAFKA_PURCHASE_TOPIC', 'guild.wars.results'),
     os.getenv("KAFKA_SCOREBOARD_TOPIC", "scoreboard-events"),
+    os.getenv("KAFKA_TOPIC_INVENTORY_UPDATES", "shop.inventory.updates"),
+
 ]
 
 consumer_conf = {
@@ -50,15 +53,13 @@ def start_kafka_consumer():
                 topic = msg.topic()
                 logger.info(f"[Kafka] start_kafka_consumer() here")
                 logger.info(f"[Kafka] Received message on topic {topic}: {event}")
-
-                if topic.endswith("auth-reserve-result"):
-                    handle_authorization_response(event)
-                # elif topic.endswith("auth-commit-result"):
-                #     handle_auth_commit_result(event)
-                elif topic.endswith("guild.wars.results"):
+                if topic.endswith("guild.wars.results"):
                     handle_guild_war_game(event)
+                elif topic.endswith("shop.inventory.updates"):
+                    handle_inventory_update(event)
                 else:
                     logger.warning(f"[Kafka] Unknown topic: {topic}")
+
 
             except Exception as e:
                 logger.exception(f"[Kafka] Error processing message: {e}")
