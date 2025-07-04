@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 http_session = requests.Session()
 
 
-def start_purchase(user_id, amount, promotion_id=None, product_id=None, chest_id=None):
+def start_purchase(user_id, amount, currency_type, promotion_id=None, product_id=None, chest_id=None):
 	try:
 		if user_id is None:
 			logger.error("Attempted to start purchase with null user_id")
@@ -29,24 +29,30 @@ def start_purchase(user_id, amount, promotion_id=None, product_id=None, chest_id
 			product_id=product_id,
 			chest_id=chest_id,
 			amount=amount,
+			currency_type=currency_type,  # Added currency_type
 			promotion_id=promotion_id,
 			status='PENDING'
 		)
 
+
 		inventory_data = {
 			'user_id': user_id,
 			'amount': 1,
-			'promotion_id': promotion_id
+			'promotion_id': promotion_id,
+			'currency_type': currency_type  # Added to inventory data
 		}
 		if product_id:
 			inventory_data['item_id'] = product_id
 		elif chest_id:
 			inventory_data['chest_id'] = chest_id
+
 		auth_command = {
 			'transaction_id': str(transaction.id),
 			'user_id': user_id,
 			'amount': amount,
+			'currency_type': currency_type
 		}
+
 		producer = get_producer()
 		producer.produce('balance-reserve-commands', json.dumps(auth_command, ensure_ascii=False).encode('utf-8'))
 		transaction.inventory_data = inventory_data
@@ -104,7 +110,8 @@ def handle_authorization_response(message):
 						'user_id': transaction.user_id,
 						'item_id': transaction.product_id,
 						'amount': 1,
-						'promotion_id': transaction.promotion_id
+						'promotion_id': transaction.promotion_id,
+						'currency_type': transaction.currency_type  # Added
 					}
 				elif transaction.chest_id:
 					from apps.chest.models import Chest
@@ -115,7 +122,8 @@ def handle_authorization_response(message):
 						'chest_id': transaction.chest_id,
 						'amount': 1,
 						'promotion_id': transaction.promotion_id,
-						'reward': reward
+						'reward': reward,
+						'currency_type': transaction.currency_type  # Added
 					}
 
 				else:
@@ -169,6 +177,7 @@ def initiate_compensation(transaction):
 		'transaction_id': str(transaction.id),
 		'user_id': transaction.user_id,
 		'amount': transaction.amount,
+		'currency_type': transaction.currency_type  # Added currency_type
 	}
 
 	try:
