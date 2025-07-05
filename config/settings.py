@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'apps.chest.apps.ChestConfig',
     'apps.purchase.apps.PurchaseConfig',
     'apps.saga.apps.SagaConfig',
+    'apps.custom_admin.apps.CustomAdminConfig',
 ]
 
 MIDDLEWARE = [
