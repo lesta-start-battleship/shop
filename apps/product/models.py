@@ -1,4 +1,3 @@
-import uuid
 from django.db import models
 
 
@@ -14,13 +13,6 @@ class Product(models.Model):
 		null=True,
 		related_name='products'
 	)
-	chest = models.ForeignKey(
-		"chest.Chest",
-		on_delete=models.SET_NULL,
-		blank=True,
-		null=True,
-		related_name='products_in_chest'
-	)
 	daily_purchase_limit = models.PositiveIntegerField(
 		null=True,
 		blank=True,
@@ -32,11 +24,9 @@ class Product(models.Model):
 
 	@property
 	def is_available(self):
-		"""Предмет доступен для покупки, если имеет цену и не привязан к сундуку."""
-		return self.cost is not None and self.chest is None
+		return self.cost is not None
 
 	def check_daily_purchase_limit(self, user_id):
-		"""Проверка дневного лимита покупок для этого предмета."""
 		if self.daily_purchase_limit is None:
 			return True  # Нет индивидуального лимита
 

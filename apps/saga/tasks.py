@@ -4,12 +4,14 @@ from confluent_kafka import Consumer
 from django.conf import settings
 import json
 
-from kafka.handlers import handle_guild_war_game
-from apps.saga.saga_orchestrator import handle_authorization_response
+from kafka.handlers import handle_guild_war_game, handle_inventory_update
+from apps.saga.saga_orchestrator import handle_authorization_response, handle_compensation_response
 
 logger = logging.getLogger(__name__)
 
 KAFKA_TOPICS = [
+    'balance-responses',
+    'compensation-responses',
     'balance-reserve-events',
     'balance-compensate-events',
     'purchase-events',
@@ -67,10 +69,12 @@ def process_kafka_messages(self):
                     handle_guild_war_game(data)
                 elif topic == 'prod.shop.fact.chest-open.1':
                     logger.info(f"[Kafka] Обработка события scoreboard: {data}")
-                elif topic in ['balance-reserve-events', 'balance-compensate-events']:
+                elif topic == 'balance-responses':
                     handle_authorization_response(msg)
-                elif topic == 'stage.game.fact.match-results.v1':
-                    logger.info(f"[Kafka] Результаты матча: {data}")
+                elif topic == 'compensation-responses':
+                    handle_compensation_response(msg)
+                elif topic == 'shop.inventory.updates':
+                    handle_inventory_update(data)
                 else:
                     logger.warning(f"[Kafka] Неизвестный топик: {topic}")
             except Exception as e:

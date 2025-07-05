@@ -15,7 +15,7 @@ class ItemListView(generics.ListAPIView):
 
 	def get_queryset(self):
 		return Product.objects.filter(
-			chest__isnull=True,
+			products_in_chest__isnull=True,
 			cost__isnull=False
 		)
 
@@ -25,14 +25,12 @@ class ItemDetailView(generics.RetrieveAPIView):
 
 	def get_queryset(self):
 		return Product.objects.filter(
-			chest__isnull=True,
+			products_in_chest__isnull=True,
 			cost__isnull=False
 		)
 
 
 class ItemBuyView(APIView):
-	permission_classes = [IsAuthenticated]
-
 	def post(self, request, item_id):
 		user = request.user
 

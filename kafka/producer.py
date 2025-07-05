@@ -2,11 +2,12 @@ import os
 import json
 import logging
 from confluent_kafka import Producer
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
 producer = Producer({
-    'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
+    'bootstrap.servers': settings.KAFKA_BOOTSTRAP_SERVERS
 })
 
 
