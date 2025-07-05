@@ -1,16 +1,27 @@
 import json
 import logging
+import os
 import requests
 import random
 from django.conf import settings
 from apps.saga.models import Transaction
+from apps.promotion.external import InventoryService
 from confluent_kafka import Producer
+from apps.purchase.models import Purchase
+from prometheus_metrics import (
+	gold_spent_total,
+	successful_purchases_total,
+	failed_purchases_total,
+	successful_chest_purchases_total,
+	successful_product_purchases_total,
+	successful_promo_purchases_total,
+)
 
-from config.settings import env
+
 
 
 def get_producer():
-	return Producer({'bootstrap.servers': env('KAFKA_BOOTSTRAP_SERVERS')})
+	return Producer({'bootstrap.servers': settings.KAFKA_BOOTSTRAP_SERVERS})
 
 
 logger = logging.getLogger(__name__)
@@ -139,6 +150,24 @@ def handle_authorization_response(message):
 				if response.status_code == 200:
 					transaction.status = 'COMPLETED'
 					logger.info(f"Transaction completed: {transaction.id}")
+					purchase = Purchase.objects.create(
+						owner=transaction.user_id,
+						item_id=transaction.product_id,
+						chest_id=transaction.chest_id,
+						promotion_id=transaction.promotion_id,
+						quantity=1
+					)
+					# Метрики
+					gold_spent_total.inc(transaction.amount)
+					successful_purchases_total.inc()
+
+					if transaction.chest_id:
+						successful_chest_purchases_total.inc()
+					if transaction.product_id:
+						successful_product_purchases_total.inc()
+					if transaction.promotion_id is not None:
+						successful_promo_purchases_total.inc()
+					logger.info(f"✅ Purchase created after successful transaction: {purchase}")
 				else:
 					raise Exception(f"Inventory error: {response.status_code} - {response.text}")
 
@@ -240,3 +269,47 @@ def handle_compensation_response(message):
 
 	except Exception as e:
 		logger.error(f"Error processing compensation: {str(e)}", exc_info=True)
+
+
+def publish_promotion_compensation(user_id: int, amount: int, item_id: int, role=None, currency="gold"):
+	event = {
+		"user_id": user_id,
+		"amount": amount,
+		"currency": currency,
+		"item_id": item_id,
+	}
+
+	if role:
+		event["role"] = role
+
+	try:
+		producer = get_producer()
+		producer.produce(
+			'promotion.compensation.commands',
+			json.dumps(event, ensure_ascii=False).encode('utf-8')
+		)
+		producer.flush()
+		logger.info(f"Compensation event sent for user {user_id}, amount {amount} {currency}")
+	except Exception as e:
+		logger.error(f"Failed to publish compensation event: {str(e)}")
+
+
+def handle_promotion_compensation_response(message):
+	try:
+		data = safe_json_parse(message)
+		if not data:
+			logger.warning("Invalid compensation response")
+			return
+
+		success = data.get("success")
+		user_id = data.get("user_id")
+		item_id = data.get("item_id")
+
+		if success:
+			InventoryService.delete_item(item_id)
+			logger.info(f"Deleted item {item_id} after successful compensation for user {user_id}")
+		else:
+			logger.error(f"Compensation failed for user {user_id}, item {item_id}, reason: {data.get('message')}")
+
+	except Exception as e:
+		logger.error(f"Error processing compensation response: {str(e)}", exc_info=True)

@@ -31,8 +31,6 @@ class ItemDetailView(generics.RetrieveAPIView):
 
 
 class ItemBuyView(APIView):
-	permission_classes = [IsAuthenticated]
-
 	def post(self, request, item_id):
 		user = request.user
 

@@ -1,8 +1,10 @@
-import os
+import os, logging, django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+django.setup()
 from celery import Celery
 from celery.signals import worker_ready
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+logger = logging.getLogger(__name__)
 
 app = Celery('config')
 app.config_from_object('django.conf:settings', namespace='CELERY')
@@ -10,20 +12,13 @@ app.autodiscover_tasks()
 
 
 @worker_ready.connect
-def at_start(sender, **kwargs):
-	"""
-	start Kafka consumer after worker started
-	"""
-	from apps.purchase.tasks import process_kafka_messages
-	from apps.purchase.tasks import process_saga_messages
-	process_kafka_messages.delay()
-	process_saga_messages.delay()
-
-
-@worker_ready.connect
-def on_worker_ready(sender, **kwargs):
-	if sender.hostname.startswith('celery.kafka@'):
-		from apps.purchase.tasks import process_kafka_messages
-		from apps.purchase.tasks import process_saga_messages
-		sender.app.send_task('apps.purchase.tasks.process_kafka_messages')
-		sender.app.send_task('apps.purchase.tasks.process_saga_messages')
+def start_kafka_consumer(sender, **kwargs):
+    """
+    Запускаем Kafka-консьюмер при старте Celery worker.
+    """
+    try:
+        from apps.saga.tasks import process_kafka_messages
+        logger.info("[Celery] Worker ready — запускаем Kafka consumer...")
+        process_kafka_messages.delay()
+    except Exception as e:
+        logger.exception(f"[Celery] Ошибка при запуске Kafka consumer: {e}")
