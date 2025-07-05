@@ -13,8 +13,9 @@ KAFKA_TOPICS = [
     'balance-reserve-events',
     'balance-compensate-events',
     'purchase-events',
-    'scoreboard-events',
+    'prod.shop.fact.chest-open.1',
     'shop.inventory.updates',
+    'stage.game.fact.match-results.v1',
 ]
 
 KAFKA_CONFIG = {
@@ -64,10 +65,12 @@ def process_kafka_messages(self):
             try:
                 if topic == 'purchase-events':
                     handle_guild_war_game(data)
-                elif topic == 'scoreboard-events':
+                elif topic == 'prod.shop.fact.chest-open.1':
                     logger.info(f"[Kafka] Обработка события scoreboard: {data}")
                 elif topic in ['balance-reserve-events', 'balance-compensate-events']:
                     handle_authorization_response(msg)
+                elif topic == 'stage.game.fact.match-results.v1':
+                    logger.info(f"[Kafka] Результаты матча: {data}")
                 else:
                     logger.warning(f"[Kafka] Неизвестный топик: {topic}")
             except Exception as e:
