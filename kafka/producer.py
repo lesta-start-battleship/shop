@@ -29,7 +29,7 @@ def send_kafka_message(topic: str, message: dict):
 
 def send_chest_promo_open_kafka_event(user_id: int, quantity: int):
     send_kafka_message(
-        os.getenv("KAFKA_SCOREBOARD_TOPIC", "scoreboard-events"),
+        os.getenv("KAFKA_SCOREBOARD_TOPIC", "prod.shop.fact.chest-open.1"),
         {
             "user_id": user_id,
             "event": "chest_promo_purchase",

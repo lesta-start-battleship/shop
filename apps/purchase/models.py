@@ -9,7 +9,7 @@ from apps.promotion.models import Promotion
 
 class Purchase(models.Model):
     """
-    Покупка: сундука, предмета или акции.
+    Покупка: предмета или сундука, с возможной привязкой к акции.
     """
     owner = models.IntegerField()  # UID пользователя
 
@@ -17,31 +17,20 @@ class Purchase(models.Model):
     chest = models.ForeignKey(Chest, null=True, blank=True, on_delete=models.SET_NULL, related_name='purchase_chest')
     promotion = models.ForeignKey(Promotion, null=True, blank=True, on_delete=models.SET_NULL, related_name='purchase_promo')
 
-    quantity = models.PositiveIntegerField(default=1)  # кол-во купленных сундуков/предметов/акций
-
+    quantity = models.PositiveIntegerField(default=1)
     date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
+        base = f"Purchase #{self.id} by UID {self.owner}: "
         if self.item:
-            return f"Purchase #{self.id} by UID {self.owner}: item #{self.item_id}, qty {self.quantity}"
-        elif self.chest:
-            return f"Purchase #{self.id} by UID {self.owner}: chest #{self.chest_id}, qty {self.quantity}"
-        elif self.promotion:
-            return f"Purchase #{self.id} by UID {self.owner}: promotion #{self.promotion_id}, qty {self.quantity}"
-        return f"Purchase #{self.id} by UID {self.owner}: unknown"
+            return base + f"item #{self.item_id}, qty {self.quantity}"
+        if self.chest:
+            return base + f"chest #{self.chest_id}, qty {self.quantity}"
+        return base + "unknown"
 
     def clean(self):
-        # Проверяем, что заполнено ровно одно из item или chest
-        if (self.item is None and self.chest is None) or (self.item is not None and self.chest is not None):
+        if (self.item is None and self.chest is None) or (self.item and self.chest):
             raise ValidationError("Ровно одно из полей item или chest должно быть заполнено.")
-
-        # Проверка положительной цены
-        if self.item and self.item.cost <= 0 or \
-                self.chest and self.chest.cost <= 0 or \
-                self.promotion and self.promotion.price <= 0:
-            raise ValidationError("Цена должна быть положительной.")
-
-        # Проверка количества
         if self.quantity <= 0:
             raise ValidationError("Количество должно быть положительным.")
 
