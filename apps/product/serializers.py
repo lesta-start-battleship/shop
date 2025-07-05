@@ -10,14 +10,7 @@ class ProductPromotionSerializer(serializers.ModelSerializer):
 		fields = ['id', 'name']
 
 
-class ProductChestSerializer(serializers.ModelSerializer):
-	class Meta:
-		model = Chest
-		fields = ['id', 'name']
-
-
 class ProductSerializer(serializers.ModelSerializer):
-	chest = ProductChestSerializer(read_only=True, allow_null=True)
 	promotion = ProductPromotionSerializer(read_only=True)
 	is_available = serializers.SerializerMethodField()
 
@@ -30,13 +23,12 @@ class ProductSerializer(serializers.ModelSerializer):
 			'currency_type',
 			'cost',
 			'promotion',
-			'chest',
 			'is_available'
 		]
 
 	def get_is_available(self, obj):
 		"""Определяем доступность продукта"""
-		return obj.cost is not None and obj.chest is None
+		return obj.cost is not None and obj.products_in_chest is None
 
 
 class ProductPurchaseSerializer(serializers.Serializer):
@@ -45,7 +37,7 @@ class ProductPurchaseSerializer(serializers.Serializer):
 	def validate_product_id(self, value):
 		try:
 			product = Product.objects.get(pk=value)
-			if not (product.cost is not None and product.chest is None):
+			if not (product.cost is not None and product.products_in_chest is None):
 				raise serializers.ValidationError("This product is not available for purchase")
 			return value
 		except Product.DoesNotExist:
