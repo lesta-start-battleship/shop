@@ -159,5 +159,24 @@ def send_chest_event_to_kafka(self, chests, user_id):
         logger.info(f"Sent {len(chests)} events in Kafka")
         return True
     except Exception as e:
-        logger.error(f"Фатальная ошибка: {str(e)}")
+        logger.error(f"Error: {str(e)}")
         raise self.retry(exc=e, countdown=2 ** self.request.retries)
+
+
+@shared_task(bind=True)
+def handle_guild_war_game(self, event: dict):
+    winner_id = event.get("winner_id")
+    loser_id = event.get("loser_id")
+    match_type = event.get("match_type")
+
+    if match_type == "event":
+        chest = Chest.objects.get()
+    # if not all([user, place]):
+    #     logger.error(f"[Kafka] Invalid guild war event: {event}")
+    #     return
+    #
+    # logger.info(f"[Kafka] Guild war: user={user}, place={place}")
+
+    # except Exception as e:
+    #     logger.error(f"Error: {str(e)}")
+    #     raise self.retry(exc=e, countdown=2 ** self.request.retries)
