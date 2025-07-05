@@ -1,3 +1,5 @@
+import os
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -26,6 +28,8 @@ class PurchaseListCreateAPIView(APIView):
         responses={201: PurchaseSerializer, 400: 'Bad Request'}
     )
     def post(self, request):
+        if not os.DEBUG:
+            return Response({"detail": "Создание покупок разрешено только из саги."}, status=403)
         user_id = request.user.id
         data = request.data.copy()
 
