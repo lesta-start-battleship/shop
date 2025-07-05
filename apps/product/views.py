@@ -31,8 +31,6 @@ class ItemDetailView(generics.RetrieveAPIView):
 
 
 class ItemBuyView(APIView):
-	permission_classes = [IsAuthenticated]
-
 	def post(self, request, item_id):
 		user = request.user
 
@@ -62,6 +60,7 @@ class ItemBuyView(APIView):
 				user_id=user.id,
 				product_id=product.id,
 				amount=product.cost,
+				currency_type=product.currency_type,
 				promotion_id=product.promotion.id if product.promotion else None
 			)
 		except Exception as e:
