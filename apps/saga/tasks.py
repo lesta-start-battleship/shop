@@ -8,7 +8,8 @@ from apps.chest.tasks import handle_guild_war_game
 from kafka.handlers import handle_inventory_update
 from .saga_orchestrator import (
     handle_authorization_response,
-    handle_compensation_response
+    handle_compensation_response,
+    handle_promotion_compensation_response
 )
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,7 @@ KAFKA_TOPICS = [
     'stage.game.fact.match-results.v1',
     'prod.scoreboard.fact.guild-war.1',
     'shop.inventory.updates',
+    'promotion.compensation.commands'
 ]
 
 KAFKA_CONFIG = {
@@ -66,6 +68,9 @@ def process_kafka_messages(self):
 
                 elif topic == 'shop.inventory.updates':
                     handle_inventory_update(data)
+
+                elif topic == 'promotion.compensation.commands':
+                    handle_promotion_compensation_response(msg)
 
                 else:
                     logger.warning(f"[Kafka] Неизвестный топик: {topic}")
