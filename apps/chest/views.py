@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from django.core.cache import cache
 from rest_framework.reverse import reverse
 from .models import Chest
 from .serializers import ChestSerializer
@@ -20,11 +21,40 @@ class ChestListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Chest.objects.all().prefetch_related('product')
+    
+    def list(self, request, *args, **kwargs):
+        cache_key = "chest:public:active"
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            return Response(cached_data)
+
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        cache.set(cache_key, serializer.data, timeout=60 * 5)  # Cache for 5 minutes
+
+        return Response(serializer.data)
 
 
 class ChestDetailView(generics.RetrieveAPIView):
     queryset = Chest.objects.all()
     serializer_class = ChestSerializer
+    
+    def retrieve(self, request, *args, **kwargs):
+        item_id = kwargs.get("pk")
+        cache_key = f"chest:detail:{item_id}"
+
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data)
+
+        
+        response = super().retrieve(request, *args, **kwargs)
+
+        
+        cache.set(cache_key, response.data, timeout=60 * 10)
+
+        return response
 
 
 class ChestBuyView(APIView):

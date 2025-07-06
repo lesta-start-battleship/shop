@@ -1,4 +1,5 @@
 from django.urls import reverse
+from django.core.cache import cache
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -16,6 +17,19 @@ class ItemListView(generics.ListAPIView):
 		return Product.objects.filter(
 			cost__isnull=False
 		)
+  
+	def list(self, request, *args, **kwargs):
+			cache_key = "product:public:active"
+			cached_data = cache.get(cache_key)
+
+			if cached_data:
+				return Response(cached_data)
+
+			queryset = self.get_queryset().order_by("id")
+			serializer = self.get_serializer(queryset, many=True)
+			cache.set(cache_key, serializer.data, timeout=60 * 5) 
+
+			return Response(serializer.data)
 
 
 class ItemDetailView(generics.RetrieveAPIView):
@@ -25,6 +39,23 @@ class ItemDetailView(generics.RetrieveAPIView):
 		return Product.objects.filter(
 			cost__isnull=False
 		)
+  
+	def retrieve(self, request, *args, **kwargs):
+			item_id = kwargs.get("pk")
+			cache_key = f"product:detail:{item_id}"
+
+			cached_data = cache.get(cache_key)
+			if cached_data:
+				return Response(cached_data)
+
+			
+			response = super().retrieve(request, *args, **kwargs)
+
+			
+			cache.set(cache_key, response.data, timeout=60 * 10)
+
+			return response
+
 
 
 class ItemBuyView(APIView):
