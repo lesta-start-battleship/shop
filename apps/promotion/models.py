@@ -4,7 +4,7 @@ import django.utils.timezone as timezone
 # Create your models here.
 class Promotion(models.Model):
 	name = models.CharField(max_length=255)
-	description = models.TextField()
+	description = models.TextField(null=True, blank=True)
 	start_date = models.DateTimeField(default=timezone.now())
 	duration = models.DurationField()
 	manually_disabled = models.BooleanField(default=False)
