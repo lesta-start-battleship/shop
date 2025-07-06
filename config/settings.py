@@ -1,5 +1,6 @@
 from pathlib import Path
 import environ, sys, os
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -94,6 +95,13 @@ CACHES = {
 CELERY_BROKER_URL = f"redis://{env('REDIS_HOST', default='redis')}:{env('REDIS_PORT', default='6379')}/0"
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ['json']
+CELERY_BEAT_SCHEDULE = {
+    'check_expired_promotions': {
+        'task': 'apps.shop.tasks.check_expired_promotions',
+        'schedule': crontab(minute='0',
+                            hour='*/12',),  # Every 12 hours
+    },
+}
 CELERY_TASK_SERIALIZER = 'json'
 
 LOGGING = {

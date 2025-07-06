@@ -7,6 +7,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework import status
 from django.utils.timezone import now
+from django.core.cache import cache
 from drf_yasg.utils import swagger_auto_schema
 from .services import compensate_promotion
 from .models import Promotion
@@ -52,9 +53,16 @@ class PromotionViewSet(ModelViewSet):
     @swagger_auto_schema(
         operation_summary="Delete a promotion",
         operation_description="Deletes a promotion by its ID.",
-        responses={204: "No Content"}
+        responses={204: "No Content",
+                   400: "Cannot delete an active promotion. Wait until it ends"}
     )
     def destroy(self, request, *args, **kwargs):
+        promo = self.get_object()
+        if not promo.has_ended():
+            return Response(
+                {"detail": "Cannot delete an active promotion. Wait until it ends"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         return super().destroy(request, *args, **kwargs)
 
     @swagger_auto_schema(
@@ -80,12 +88,24 @@ class PublicPromotionListView(ListAPIView):
     permission_classes = [IsAuthenticated]  # Or IsAuthenticated if needed
 
     def get_queryset(self):
-        # Only show active promotions to users
         return Promotion.objects.filter(
             start_date__lte=now(),
             end_date__gte=now(),
             manually_disabled=False
         )
+
+    def list(self, request, *args, **kwargs):
+        cache_key = "promotion:public:active"
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            return Response(cached_data)
+
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        cache.set(cache_key, serializer.data, timeout=60 * 5)  # Cache for 5 minutes
+
+        return Response(serializer.data)
 
 class SpecificPromotionView(APIView):
     @swagger_auto_schema(
@@ -98,6 +118,12 @@ class SpecificPromotionView(APIView):
         }
     )
     def get(self, request, pk):
+        
+        cache_key = f"promotion:specific:{pk}"
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            return Response(cached_data)
         
         prom = Promotion.objects.filter(
             pk=pk,
