@@ -14,7 +14,10 @@ def create_purchase(owner_id: int, item_id=None, chest_id=None, promotion_id=Non
     if item_id:
         if chest_id:
             raise ValidationError("Нельзя одновременно указать и item, и chest.")
-        item = Product.objects.get(id=item_id)
+        try:
+            item = Product.objects.get(id=item_id)
+        except Product.DoesNotExist:
+            raise ValidationError("Указанный item не существует")
 
     elif chest_id:
         chest = Chest.objects.get(id=chest_id)

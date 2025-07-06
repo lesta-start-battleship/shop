@@ -6,7 +6,7 @@ from django.conf import settings
 from .models import Transaction
 from apps.promotion.external import InventoryService
 from confluent_kafka import Producer
-from apps.purchase.models import Purchase
+from apps.purchase.services import create_purchase
 
 from prometheus_metrics import (
 	gold_spent_total,
@@ -142,8 +142,8 @@ def handle_authorization_response(message):
 				if response.status_code == 200:
 					transaction.status = 'COMPLETED'
 					logger.info(f"Transaction completed: {transaction.id}")
-					purchase = Purchase.objects.create(
-						owner=transaction.user_id,
+					purchase = create_purchase(
+						owner_id=transaction.user_id,
 						item_id=transaction.product_id,
 						chest_id=transaction.chest_id,
 						promotion_id=transaction.promotion_id,
