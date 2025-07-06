@@ -76,16 +76,18 @@ class ChestBuyView(APIView):
 
 class OpenChestView(APIView):
     def post(self, request):
-        auth_header = request.META.get('HTTP_BEARER', '')
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
 
-        #TODO
-        # if not auth_header.startswith('Bearer '):
-        #     return Response(
-        #         {"error": "Invalid authorization header"},
-        #         status=status.HTTP_401_UNAUTHORIZED
-        #     )
+        if not auth_header.startswith('Bearer '):
+            return Response(
+                {"error": "Invalid authorization header"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
-        token = auth_header
+        if auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+        else:
+            token = auth_header.strip()
 
         try:
             payload = jwt.decode(token, options={"verify_signature": False})

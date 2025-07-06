@@ -4,6 +4,7 @@ from confluent_kafka import Consumer
 from django.conf import settings
 import json
 
+from apps.chest.tasks import handle_guild_war_match_result, handle_guild_war_game_result
 from kafka.handlers import handle_guild_war_game, handle_inventory_update
 from apps.saga.saga_orchestrator import handle_authorization_response, handle_compensation_response
 
@@ -13,8 +14,9 @@ KAFKA_TOPICS = [
 	'balance-responses',
 	'compensation-responses',
 	'purchase-events',
-	'scoreboard-events',
 	'shop.inventory.updates',
+	'stage.game.fact.match-results.v1',
+	'prod.scoreboard.fact.guild-war.1',
 ]
 
 KAFKA_CONFIG = {
@@ -72,11 +74,14 @@ def process_kafka_messages(self):
 					handle_compensation_response(msg)
 				elif topic == 'shop.inventory.updates':
 					handle_inventory_update(data)
+				elif topic == 'stage.game.fact.match-results.v1':
+					handle_guild_war_match_result.delay(data)
+				elif topic == 'prod.scoreboard.fact.guild-war.1':
+					handle_guild_war_game_result.delay(data)
 				else:
 					logger.warning(f"[Kafka] Неизвестный топик: {topic}")
 			except Exception as e:
 				logger.exception(f"[Kafka] Ошибка при обработке сообщения из {topic}: {e}")
-
 
 	except Exception as e:
 		logger.exception(f"[KafkaTask] Общая ошибка Kafka consumer: {e}")
