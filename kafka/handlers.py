@@ -4,16 +4,6 @@ from apps.product.models import Product
 logger = logging.getLogger(__name__)
 
 
-def handle_guild_war_game(event: dict):
-    user = event.get("user_id")
-    place = event.get("place")
-    if not all([user, place]):
-        logger.error(f"[Kafka] Invalid guild war event: {event}")
-        return
-
-    logger.info(f"[Kafka] Guild war: user={user}, place={place}")
-
-
 def handle_inventory_update(event: dict):
     product_id = event.get("id")
     if not product_id:

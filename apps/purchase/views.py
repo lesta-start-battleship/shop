@@ -7,7 +7,7 @@ from .serializers import PurchaseSerializer
 from .models import Purchase
 
 
-class PurchaseListCreateAPIView(APIView):
+class PurchaseListAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @swagger_auto_schema(

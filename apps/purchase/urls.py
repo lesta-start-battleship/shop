@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import PurchaseListCreateAPIView
+from .views import PurchaseListAPIView
 
 urlpatterns = [
-    path('', PurchaseListCreateAPIView.as_view(), name="purchase-list-create"),  # GET /purchase/
+    path('', PurchaseListAPIView.as_view(), name="purchase-list-create"),  # GET /purchase/
 ]
