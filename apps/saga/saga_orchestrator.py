@@ -1,13 +1,13 @@
 import json
 import logging
-import os
 import requests
 import random
 from django.conf import settings
-from apps.saga.models import Transaction
+from .models import Transaction
 from apps.promotion.external import InventoryService
 from confluent_kafka import Producer
 from apps.purchase.models import Purchase
+
 from prometheus_metrics import (
 	gold_spent_total,
 	successful_purchases_total,
@@ -18,6 +18,12 @@ from prometheus_metrics import (
 )
 
 
+def safe_json_decode(msg):
+	try:
+		return json.loads(msg.value().decode('utf-8'))
+	except Exception as e:
+		logger.error(f"[Kafka] JSON decode error: {e}")
+		return None
 
 
 def get_producer():
@@ -76,23 +82,9 @@ def start_purchase(user_id, amount, currency_type, promotion_id=None, product_id
 		raise
 
 
-def safe_json_parse(message):
-	if message is None or message.value() is None:
-		return None
-
-	try:
-		return json.loads(message.value().decode('utf-8'))
-	except json.JSONDecodeError as e:
-		logger.error(f"JSON decode error: {str(e)}")
-		return None
-	except Exception as e:
-		logger.error(f"Unexpected message parsing error: {str(e)}")
-		return None
-
-
 def handle_authorization_response(message):
 	try:
-		data = safe_json_parse(message)
+		data = safe_json_decode(message)
 		if not data:
 			logger.warning("Received empty or invalid auth response message")
 			return
@@ -105,7 +97,7 @@ def handle_authorization_response(message):
 			logger.error(f"Invalid transaction data: {str(e)}")
 			return
 
-		if data.get('success'):
+		if data.get('success') is True:
 			transaction.status = 'RESERVED'
 			transaction.save()
 			logger.info(f"Transaction reserved: {transaction.id}")
@@ -244,7 +236,7 @@ def initiate_compensation(transaction):
 
 def handle_compensation_response(message):
 	try:
-		data = safe_json_parse(message)
+		data = safe_json_decode(message)
 		if not data:
 			logger.warning("Empty or invalid compensation response")
 			return
@@ -296,7 +288,7 @@ def publish_promotion_compensation(user_id: int, amount: int, item_id: int, role
 
 def handle_promotion_compensation_response(message):
 	try:
-		data = safe_json_parse(message)
+		data = safe_json_decode(message)
 		if not data:
 			logger.warning("Invalid compensation response")
 			return

@@ -24,10 +24,7 @@ class GatewayJWTAuthentication(authentication.BaseAuthentication):
 
 		try:
 			payload = jwt.decode(token, options={"verify_signature": False})
-
-			# Ensure user_id is always an integer
 			user_id = int(payload.get('sub')) if payload.get('sub') else None
-
 			user = GatewayUser(
 				user_id=user_id,
 				username=payload.get('username'),

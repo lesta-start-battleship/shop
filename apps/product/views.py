@@ -15,7 +15,6 @@ class ItemListView(generics.ListAPIView):
 
 	def get_queryset(self):
 		return Product.objects.filter(
-			products_in_chest__isnull=True,
 			cost__isnull=False
 		)
 
@@ -25,7 +24,6 @@ class ItemDetailView(generics.RetrieveAPIView):
 
 	def get_queryset(self):
 		return Product.objects.filter(
-			products_in_chest__isnull=True,
 			cost__isnull=False
 		)
 
@@ -42,7 +40,6 @@ class ItemBuyView(APIView):
 
 		product = get_object_or_404(
 			Product.objects.filter(
-				chest__isnull=True,
 				cost__isnull=False
 			),
 			id=item_id

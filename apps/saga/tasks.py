@@ -2,10 +2,10 @@ import logging
 from celery import shared_task
 from confluent_kafka import Consumer
 from django.conf import settings
-import json
+from .saga_orchestrator import safe_json_decode
 
 from kafka.handlers import handle_guild_war_game, handle_inventory_update
-from apps.saga.saga_orchestrator import handle_authorization_response, handle_compensation_response
+from .saga_orchestrator import handle_authorization_response, handle_compensation_response
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +27,6 @@ KAFKA_CONFIG = {
 }
 
 
-def safe_json_decode(msg):
-    try:
-        return json.loads(msg.value().decode('utf-8'))
-    except Exception as e:
-        logger.error(f"[Kafka] JSON decode error: {e}")
-        return None
 
 
 @shared_task(bind=True)

@@ -1,12 +1,12 @@
-from rest_framework import viewsets, status
-from rest_framework.exceptions import PermissionDenied, NotFound
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework import viewsets, generics
+from rest_framework.exceptions import NotFound
 
-from .serializers import AdminChestSerializer, AdminProductSerializer
+
+from .serializers import AdminChestSerializer, AdminProductSerializer, AdminPromotionSerializer
 from ..chest.models import Chest
 from .permissions import IsAdmin
 from ..product.models import Product
+from ..promotion.models import Promotion
 
 
 class AdminChestViewSet(viewsets.ModelViewSet):
@@ -15,32 +15,26 @@ class AdminChestViewSet(viewsets.ModelViewSet):
 	permission_classes = [IsAdmin]
 
 
-class AdminProductAPIView(APIView):
+class AdminProductListAPIView(generics.ListAPIView):
 	permission_classes = [IsAdmin]
+	serializer_class = AdminProductSerializer
+	queryset = Product.objects.all()
 
-	def get_object(self, pk):
+
+class AdminProductAPIView(generics.RetrieveUpdateDestroyAPIView):
+	permission_classes = [IsAdmin]
+	serializer_class = AdminProductSerializer
+	queryset = Product.objects.all()
+	lookup_field = 'pk'
+
+	def get_object(self):
 		try:
-			return Product.objects.get(pk=pk)
+			return super().get_object()
 		except Product.DoesNotExist:
 			raise NotFound("Product not found")
 
-	def get(self, request, pk):
-		product = self.get_object(pk)
-		serializer = AdminProductSerializer(product)
-		return Response(serializer.data)
 
-	def put(self, request, pk):
-		product = self.get_object(pk)
-		serializer = AdminProductSerializer(product, data=request.data, partial=False, context={"request": request})
-		if serializer.is_valid():
-			serializer.save()
-			return Response(serializer.data)
-		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-	def patch(self, request, pk):
-		product = self.get_object(pk)
-		serializer = AdminProductSerializer(product, data=request.data, partial=True, context={"request": request})
-		if serializer.is_valid():
-			serializer.save()
-			return Response(serializer.data)
-		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class AdminPromotionViewSet(viewsets.ModelViewSet):
+	queryset = Promotion.objects.all()
+	serializer_class = AdminPromotionSerializer
+	permission_classes = [IsAdmin]
