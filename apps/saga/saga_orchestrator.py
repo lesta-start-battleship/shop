@@ -113,7 +113,7 @@ def handle_authorization_response(message):
 						'item_id': transaction.product_id,
 						'amount': 1,
 						'promotion_id': transaction.promotion_id,
-						'currency_type': transaction.currency_type  # Added
+						'currency_type': transaction.currency_type
 					}
 				elif transaction.chest_id:
 					from apps.chest.models import Chest
@@ -249,7 +249,7 @@ def handle_compensation_response(message):
 			logger.error(f"Invalid transaction in compensation: {str(e)}")
 			return
 
-		if data.get('success'):
+		if data.get('success') is True:
 			transaction.status = 'COMPENSATED'
 			logger.info(f"Transaction compensated: {transaction.id}")
 		else:

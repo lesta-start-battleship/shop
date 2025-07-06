@@ -28,7 +28,7 @@ class Product(models.Model):
 
 	def check_daily_purchase_limit(self, user_id):
 		if self.daily_purchase_limit is None:
-			return True  # Нет индивидуального лимита
+			return True
 
 		from datetime import datetime, timedelta
 		from django.utils import timezone

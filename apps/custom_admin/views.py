@@ -12,17 +12,17 @@ from ..promotion.models import Promotion
 class AdminChestViewSet(viewsets.ModelViewSet):
 	queryset = Chest.objects.all()
 	serializer_class = AdminChestSerializer
-	permission_classes = [IsAdmin]
+	# permission_classes = [IsAdmin]
 
 
 class AdminProductListAPIView(generics.ListAPIView):
-	permission_classes = [IsAdmin]
+	# permission_classes = [IsAdmin]
 	serializer_class = AdminProductSerializer
 	queryset = Product.objects.all()
 
 
 class AdminProductAPIView(generics.RetrieveUpdateDestroyAPIView):
-	permission_classes = [IsAdmin]
+	# permission_classes = [IsAdmin]
 	serializer_class = AdminProductSerializer
 	queryset = Product.objects.all()
 	lookup_field = 'pk'
@@ -37,4 +37,4 @@ class AdminProductAPIView(generics.RetrieveUpdateDestroyAPIView):
 class AdminPromotionViewSet(viewsets.ModelViewSet):
 	queryset = Promotion.objects.all()
 	serializer_class = AdminPromotionSerializer
-	permission_classes = [IsAdmin]
+	# permission_classes = [IsAdmin]

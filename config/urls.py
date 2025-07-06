@@ -2,7 +2,6 @@ from django.urls import path, include, re_path
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 schema_view = get_schema_view(
 	openapi.Info(
@@ -19,7 +18,7 @@ schema_view = get_schema_view(
 
 urlpatterns = [
 	path('admin/', include('apps.custom_admin.urls')),
-	path('product/', include('apps.product.urls')),
+	path('item/', include('apps.product.urls')),
 	path('promotion/', include('apps.promotion.urls')),
 	path('purchase/', include('apps.purchase.urls')),
 	path('chest/', include('apps.chest.urls')),
