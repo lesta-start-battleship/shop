@@ -20,8 +20,4 @@ class PurchaseSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Цена предмета должна быть положительной.")
         if chest and chest.cost <= 0:
             raise serializers.ValidationError("Цена сундука должна быть положительной.")
-
         return data
-
-
-

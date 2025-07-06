@@ -10,14 +10,15 @@ from .saga_orchestrator import handle_authorization_response, handle_compensatio
 logger = logging.getLogger(__name__)
 
 KAFKA_TOPICS = [
+    'balance-reserve-commands',
     'balance-responses',
+    'balance-compensate-commands',
     'compensation-responses',
-    'balance-reserve-events',
-    'balance-compensate-events',
-    'purchase-events',
-    'prod.shop.fact.chest-open.1',
-    'shop.inventory.updates',
     'stage.game.fact.match-results.v1',
+    'prod.scoreboard.fact.guild-war.1',
+    'promotion.compensation.commands',
+    'shop.inventory.updates',
+    'prod.shop.fact.chest-open.1'
 ]
 
 KAFKA_CONFIG = {
@@ -25,8 +26,6 @@ KAFKA_CONFIG = {
     'group.id': 'shop-consumer-group',
     'auto.offset.reset': 'earliest',
 }
-
-
 
 
 @shared_task(bind=True)
