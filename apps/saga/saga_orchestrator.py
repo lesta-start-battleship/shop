@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 http_session = requests.Session()
 
 
-def start_purchase(user_id, amount, currency_type, promotion_id=None, product_id=None, chest_id=None):
+def start_purchase(user_id, cost, currency_type, promotion_id=None, product_id=None, chest_id=None):
 	try:
 		if user_id is None:
 			logger.error("Attempted to start purchase with null user_id")
@@ -45,7 +45,7 @@ def start_purchase(user_id, amount, currency_type, promotion_id=None, product_id
 			user_id=user_id,
 			product_id=product_id,
 			chest_id=chest_id,
-			amount=amount,
+			cost=cost,
 			currency_type=currency_type,
 			promotion_id=promotion_id,
 			status='PENDING'
@@ -65,12 +65,12 @@ def start_purchase(user_id, amount, currency_type, promotion_id=None, product_id
 		auth_command = {
 			'transaction_id': str(transaction.id),
 			'user_id': user_id,
-			'amount': amount,
+			'cost': cost,
 			'currency_type': currency_type
 		}
 
 		producer = get_producer()
-		producer.produce('balance-reserve-commands', json.dumps(auth_command, ensure_ascii=False).encode('utf-8'))
+		producer.produce('shop.balance.reserve.request.auth', json.dumps(auth_command, ensure_ascii=False).encode('utf-8'))
 		transaction.inventory_data = inventory_data
 		transaction.save()
 		producer.flush()
@@ -150,7 +150,7 @@ def handle_authorization_response(message):
 						quantity=1
 					)
 					# Метрики
-					gold_spent_total.inc(transaction.amount)
+					gold_spent_total.inc(transaction.cost)
 					successful_purchases_total.inc()
 
 					if transaction.chest_id:
@@ -212,14 +212,14 @@ def initiate_compensation(transaction):
 	compensate_command = {
 		'transaction_id': str(transaction.id),
 		'user_id': transaction.user_id,
-		'amount': transaction.amount,
+		'cost': transaction.cost,
 		'currency_type': transaction.currency_type
 	}
 
 	try:
 		producer = get_producer()
 		producer.produce(
-			'balance-compensate-commands',
+			'shop.balance.compensate.request.auth',
 			json.dumps(compensate_command, ensure_ascii=False).encode('utf-8')
 		)
 		producer.flush()

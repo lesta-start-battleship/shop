@@ -86,7 +86,7 @@ class ItemBuyView(APIView):
 			transaction = start_purchase(
 				user_id=user.id,
 				product_id=product.id,
-				amount=product.cost,
+				cost=product.cost,
 				currency_type=product.currency_type,
 				promotion_id=product.promotion.id if product.promotion else None
 			)

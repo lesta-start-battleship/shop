@@ -10,8 +10,8 @@ from .saga_orchestrator import handle_authorization_response, handle_compensatio
 logger = logging.getLogger(__name__)
 
 KAFKA_TOPICS = [
-    'balance-responses',
-    'compensation-responses',
+    'auth.balance.reserve.response.shop',
+    'auth.balance.compensate.response.shop',
     'balance-reserve-events',
     'balance-compensate-events',
     'purchase-events',
@@ -63,9 +63,9 @@ def process_kafka_messages(self):
                     handle_guild_war_game(data)
                 elif topic == 'prod.shop.fact.chest-open.1':
                     logger.info(f"[Kafka] Обработка события scoreboard: {data}")
-                elif topic == 'balance-responses':
+                elif topic == 'auth.balance.reserve.response.shop':
                     handle_authorization_response(msg)
-                elif topic == 'compensation-responses':
+                elif topic == 'auth.balance.compensate.response.shop':
                     handle_compensation_response(msg)
                 elif topic == 'shop.inventory.updates':
                     handle_inventory_update(data)
