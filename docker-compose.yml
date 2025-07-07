@@ -33,8 +33,8 @@ services:
       - .env.prod
     environment:
       - RUN_MIGRATIONS=1
-    entrypoint: ["/entrypoint.sh"]
-    command: ["gunicorn"]
+    entrypoint: [ "/entrypoint.sh" ]
+    command: [ "gunicorn" ]
     networks:
       - shopnet
 
@@ -51,8 +51,8 @@ services:
       - .env.prod
     environment:
       - RUN_MIGRATIONS=0
-    entrypoint: ["/entrypoint.sh"]
-    command: ["celery"]
+    entrypoint: [ "/entrypoint.sh" ]
+    command: [ "celery" ]
     networks:
       - shopnet
 
@@ -62,16 +62,17 @@ services:
       - static_volume:/code/staticfiles
       - ./entrypoint.sh:/entrypoint.sh
     depends_on:
-      - redis
+      - shop
       - shop-db-1
     env_file:
       - .env.prod
     environment:
       - RUN_MIGRATIONS=0
-    entrypoint: ["/entrypoint.sh"]
-    command: ["beat"]
+    entrypoint: [ "/entrypoint.sh" ]
+    command: [ "beat" ]
     networks:
       - shopnet
+
 
 volumes:
   postgres_data:

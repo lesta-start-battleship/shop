@@ -1,9 +1,10 @@
 from django.urls import reverse
 from django.core.cache import cache
-from rest_framework import generics, status
+from rest_framework import generics, status, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.product.models import Product
 from apps.product.serializers import ProductSerializer
@@ -12,50 +13,50 @@ from apps.saga.saga_orchestrator import start_purchase
 
 class ItemListView(generics.ListAPIView):
 	serializer_class = ProductSerializer
+	filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
+	search_fields = ['name', 'description', 'kind']
+	filterset_fields = ['currency_type', 'kind']
+	ordering_fields = ['cost', 'name']
+	ordering = ['name']
 
 	def get_queryset(self):
-		return Product.objects.filter(
-			cost__isnull=False
-		)
-  
+		queryset = Product.objects.filter(cost__isnull=False)
+		return queryset
+
 	def list(self, request, *args, **kwargs):
-			cache_key = "product:public:active"
-			cached_data = cache.get(cache_key)
+		cache_key = f"product:public:active:{request.query_params.urlencode()}"
+		cached_data = cache.get(cache_key)
 
-			if cached_data:
-				return Response(cached_data)
+		if cached_data:
+			return Response(cached_data)
 
-			queryset = self.get_queryset().order_by("id")
-			serializer = self.get_serializer(queryset, many=True)
-			cache.set(cache_key, serializer.data, timeout=60 * 5) 
+		queryset = self.filter_queryset(self.get_queryset())
+		serializer = self.get_serializer(queryset, many=True)
+		cache.set(cache_key, serializer.data, timeout=60 * 5)
 
-			return Response(serializer.data)
+		return Response(serializer.data)
 
 
 class ItemDetailView(generics.RetrieveAPIView):
 	serializer_class = ProductSerializer
+	lookup_field = 'item_id'
+	lookup_url_kwarg = 'item_id'
 
 	def get_queryset(self):
-		return Product.objects.filter(
-			cost__isnull=False
-		)
-  
+		return Product.objects.filter(cost__isnull=False)
+
 	def retrieve(self, request, *args, **kwargs):
-			item_id = kwargs.get("pk")
-			cache_key = f"product:detail:{item_id}"
+		item_id = kwargs.get("item_id")
+		cache_key = f"product:detail:{item_id}"
 
-			cached_data = cache.get(cache_key)
-			if cached_data:
-				return Response(cached_data)
+		cached_data = cache.get(cache_key)
+		if cached_data:
+			return Response(cached_data)
 
-			
-			response = super().retrieve(request, *args, **kwargs)
+		response = super().retrieve(request, *args, **kwargs)
+		cache.set(cache_key, response.data, timeout=60 * 10)
 
-			
-			cache.set(cache_key, response.data, timeout=60 * 10)
-
-			return response
-
+		return response
 
 
 class ItemBuyView(APIView):
@@ -69,26 +70,33 @@ class ItemBuyView(APIView):
 			)
 
 		product = get_object_or_404(
-			Product.objects.filter(
-				cost__isnull=False
-			),
-			id=item_id
+			Product.objects.filter(cost__isnull=False),
+			item_id=item_id
 		)
 
-		# Проверка индивидуального лимита только если предмет не в акции
 		if not product.check_daily_purchase_limit(user.id):
 			return Response(
 				{"error": "Превышен дневной лимит для этого предмета"},
 				status=status.HTTP_400_BAD_REQUEST
 			)
 
+		# Extract the token from the Authorization header
+		auth_header = request.headers.get('Authorization', '')
+		if not auth_header.startswith('Bearer '):
+			return Response(
+				{"error": "Токен отсутствует или неверный"},
+				status=status.HTTP_401_UNAUTHORIZED
+			)
+		token = auth_header.split(' ')[1]
+
 		try:
 			transaction = start_purchase(
 				user_id=user.id,
-				product_id=product.id,
+				item_id=product.item_id,
 				cost=product.cost,
 				currency_type=product.currency_type,
-				promotion_id=product.promotion.id if product.promotion else None
+				promotion_id=product.promotion.id if product.promotion else None,
+				token=token  # Pass the token to start_purchase
 			)
 		except Exception as e:
 			return Response(
@@ -104,5 +112,5 @@ class ItemBuyView(APIView):
 		return Response({
 			"status": "purchase_started",
 			"transaction_id": str(transaction.id),
-			"status_url": status_url
+			"status_url": request.build_absolute_uri(status_url)
 		}, status=status.HTTP_202_ACCEPTED)

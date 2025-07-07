@@ -24,7 +24,6 @@ KAFKA_TOPICS = [
     'shop.inventory.updates',
     'stage.game.fact.match-results.v1',
     'prod.scoreboard.fact.guild-war.1',
-    'shop.inventory.updates',
     'promotion.compensation.commands'
 ]
 
