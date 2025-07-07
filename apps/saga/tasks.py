@@ -4,7 +4,11 @@ from confluent_kafka import Consumer
 from django.conf import settings
 from .saga_orchestrator import safe_json_decode
 
-from apps.chest.tasks import handle_guild_war_game
+
+from apps.chest.tasks import (
+  handle_guild_war_match_result, 
+  handle_guild_war_game_result,
+)
 from kafka.handlers import handle_inventory_update
 from .saga_orchestrator import (
     handle_authorization_response,
@@ -37,58 +41,59 @@ KAFKA_CONFIG = {
 
 @shared_task(bind=True)
 def process_kafka_messages(self):
-    """
-    Celery-задача для бесконечного Kafka-консьюмера.
-    """
-    logger.info("[KafkaTask] Запуск Kafka consumer из Celery задачи...")
 
-    consumer = Consumer(KAFKA_CONFIG)
-    consumer.subscribe(KAFKA_TOPICS)
+	"""
+	Celery-задача для бесконечного Kafka-консьюмера.
+	"""
+	logger.info("[KafkaTask] Запуск Kafka consumer из Celery задачи...")
 
-    try:
-        while True:
-            msg = consumer.poll(1.0)
-            if msg is None:
-                continue
+	consumer = Consumer(KAFKA_CONFIG)
+	consumer.subscribe(KAFKA_TOPICS)
 
-            if msg.error():
-                logger.error(f"[Kafka] Consumer error: {msg.error()}")
-                continue
+	try:
+		while True:
+			msg = consumer.poll(1.0)
+			if msg is None:
+				continue
 
-            data = safe_json_decode(msg)
-            topic = msg.topic()
+			if msg.error():
+				logger.error(f"[Kafka] Consumer error: {msg.error()}")
+				continue
 
-            if data is None:
-                logger.warning(f"[Kafka] Пустое или неверное сообщение в топике: {topic}")
-                continue
+			data = safe_json_decode(msg)
+			topic = msg.topic()
 
-            logger.info(f"[Kafka] Получено сообщение из топика {topic}: {data}")
+			if data is None:
+				logger.warning(f"[Kafka] Пустое или неверное сообщение в топике: {topic}")
+				continue
 
-            try:
-                if topic in ['stage.game.fact.match-results.v1', 'prod.scoreboard.fact.guild-war.1']:
-                    handle_guild_war_game(data)
-                elif topic == 'prod.shop.fact.chest-open.1':
-                    logger.info(f"[Kafka] Обработка события scoreboard: {data}")
-                elif topic == 'auth.balance.reserve.response.shop':
-                    handle_authorization_response(msg)
-                elif topic == 'auth.balance.compensate.response.shop':
-                    handle_compensation_response(msg)
+			logger.info(f"[Kafka] Получено сообщение из топика {topic}: {data}")
+			try:
+        if topic == 'auth.balance.reserve.response.shop':
+          handle_authorization_response(msg)
+        elif topic == 'auth.balance.compensate.response.shop':
+          handle_compensation_response(msg)
+        elif topic == 'shop.inventory.updates':
+          handle_inventory_update(data)
+				elif topic == 'balance-responses':
+					handle_authorization_response(msg)
+				elif topic == 'compensation-responses':
+					handle_compensation_response(msg)
+				elif topic == 'shop.inventory.updates':
+					handle_inventory_update(data)
+				elif topic == 'stage.game.fact.match-results.v1':
+					handle_guild_war_match_result.delay(data)
+				elif topic == 'prod.scoreboard.fact.guild-war.1':
+					handle_guild_war_game_result.delay(data)
+        elif topic == 'promotion.compensation.commands':
+          handle_promotion_compensation_response(msg)
+				else:
+					logger.warning(f"[Kafka] Неизвестный топик: {topic}")
+			except Exception as e:
+				logger.exception(f"[Kafka] Ошибка при обработке сообщения из {topic}: {e}")
 
-                elif topic == 'shop.inventory.updates':
-                    handle_inventory_update(data)
-
-                elif topic == 'promotion.compensation.commands':
-                    handle_promotion_compensation_response(msg)
-
-                else:
-                    logger.warning(f"[Kafka] Неизвестный топик: {topic}")
-
-            except Exception as e:
-                logger.exception(f"[Kafka] Ошибка при обработке сообщения из {topic}: {e}")
-
-    except Exception as e:
-        logger.exception(f"[KafkaTask] Общая ошибка Kafka consumer: {e}")
-
-    finally:
-        consumer.close()
-        logger.info("[KafkaTask] Kafka consumer остановлен")
+	except Exception as e:
+		logger.exception(f"[KafkaTask] Общая ошибка Kafka consumer: {e}")
+	finally:
+		consumer.close()
+		logger.info("[KafkaTask] Kafka consumer остановлен")
