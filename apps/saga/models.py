@@ -16,7 +16,7 @@ class Transaction(models.Model):
 	user_id = models.IntegerField()
 	product_id = models.IntegerField(null=True, blank=True)
 	chest_id = models.IntegerField(null=True, blank=True)
-	amount = models.IntegerField()
+	cost = models.IntegerField()
 	currency_type = models.CharField(max_length=255)
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
 	created_at = models.DateTimeField(auto_now_add=True)

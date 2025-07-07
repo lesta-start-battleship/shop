@@ -19,7 +19,7 @@ KAFKA_PURCHASE_TOPIC=purchase-events
 KAFKA_TOPIC_AUTH_RESERVE=auth-reserve
 KAFKA_TOPIC_INVENTORY_ADD=inventory-add
 KAFKA_TOPIC_AUTH_COMMIT=auth-commit
-KAFKA_SCOREBOARD_TOPIC=scoreboard-events
+KAFKA_SCOREBOARD_TOPIC=prod.shop.fact.chest-open.1
 KAFKA_PRODUCT_GROUP=inventory-group
 KAFKA_PRODUCT_TOPIC=shop.inventory.updates
 

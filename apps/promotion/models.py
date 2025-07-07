@@ -4,8 +4,8 @@ import django.utils.timezone as timezone
 # Create your models here.
 class Promotion(models.Model):
 	name = models.CharField(max_length=255)
-	description = models.TextField()
-	start_date = models.DateTimeField(default=timezone.now())
+	description = models.TextField(null=True, blank=True)
+	start_date = models.DateTimeField(default=timezone.now)
 	duration = models.DurationField()
 	manually_disabled = models.BooleanField(default=False)
 	compensation_done = models.BooleanField(default=False)
@@ -23,7 +23,3 @@ class Promotion(models.Model):
 		
 	def has_ended(self):
 		return timezone.now() > self.end_date
-
-
-
-		

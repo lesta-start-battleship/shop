@@ -1,13 +1,13 @@
 import json
 import logging
-import os
 import requests
 import random
 from django.conf import settings
-from apps.saga.models import Transaction
+from .models import Transaction
 from apps.promotion.external import InventoryService
 from confluent_kafka import Producer
-from apps.purchase.models import Purchase
+from apps.purchase.services import create_purchase
+
 from prometheus_metrics import (
 	gold_spent_total,
 	successful_purchases_total,
@@ -18,6 +18,12 @@ from prometheus_metrics import (
 )
 
 
+def safe_json_decode(msg):
+	try:
+		return json.loads(msg.value().decode('utf-8'))
+	except Exception as e:
+		logger.error(f"[Kafka] JSON decode error: {e}")
+		return None
 
 
 def get_producer():
@@ -29,7 +35,7 @@ logger = logging.getLogger(__name__)
 http_session = requests.Session()
 
 
-def start_purchase(user_id, amount, currency_type, promotion_id=None, product_id=None, chest_id=None):
+def start_purchase(user_id, cost, currency_type, promotion_id=None, product_id=None, chest_id=None):
 	try:
 		if user_id is None:
 			logger.error("Attempted to start purchase with null user_id")
@@ -39,7 +45,7 @@ def start_purchase(user_id, amount, currency_type, promotion_id=None, product_id
 			user_id=user_id,
 			product_id=product_id,
 			chest_id=chest_id,
-			amount=amount,
+			cost=cost,
 			currency_type=currency_type,
 			promotion_id=promotion_id,
 			status='PENDING'
@@ -59,12 +65,12 @@ def start_purchase(user_id, amount, currency_type, promotion_id=None, product_id
 		auth_command = {
 			'transaction_id': str(transaction.id),
 			'user_id': user_id,
-			'amount': amount,
+			'cost': cost,
 			'currency_type': currency_type
 		}
 
 		producer = get_producer()
-		producer.produce('balance-reserve-commands', json.dumps(auth_command, ensure_ascii=False).encode('utf-8'))
+		producer.produce('shop.balance.reserve.request.auth', json.dumps(auth_command, ensure_ascii=False).encode('utf-8'))
 		transaction.inventory_data = inventory_data
 		transaction.save()
 		producer.flush()
@@ -76,23 +82,9 @@ def start_purchase(user_id, amount, currency_type, promotion_id=None, product_id
 		raise
 
 
-def safe_json_parse(message):
-	if message is None or message.value() is None:
-		return None
-
-	try:
-		return json.loads(message.value().decode('utf-8'))
-	except json.JSONDecodeError as e:
-		logger.error(f"JSON decode error: {str(e)}")
-		return None
-	except Exception as e:
-		logger.error(f"Unexpected message parsing error: {str(e)}")
-		return None
-
-
 def handle_authorization_response(message):
 	try:
-		data = safe_json_parse(message)
+		data = safe_json_decode(message)
 		if not data:
 			logger.warning("Received empty or invalid auth response message")
 			return
@@ -105,7 +97,7 @@ def handle_authorization_response(message):
 			logger.error(f"Invalid transaction data: {str(e)}")
 			return
 
-		if data.get('success'):
+		if data.get('success') is True:
 			transaction.status = 'RESERVED'
 			transaction.save()
 			logger.info(f"Transaction reserved: {transaction.id}")
@@ -121,7 +113,7 @@ def handle_authorization_response(message):
 						'item_id': transaction.product_id,
 						'amount': 1,
 						'promotion_id': transaction.promotion_id,
-						'currency_type': transaction.currency_type  # Added
+						'currency_type': transaction.currency_type
 					}
 				elif transaction.chest_id:
 					from apps.chest.models import Chest
@@ -150,15 +142,15 @@ def handle_authorization_response(message):
 				if response.status_code == 200:
 					transaction.status = 'COMPLETED'
 					logger.info(f"Transaction completed: {transaction.id}")
-					purchase = Purchase.objects.create(
-						owner=transaction.user_id,
+					purchase = create_purchase(
+						owner_id=transaction.user_id,
 						item_id=transaction.product_id,
 						chest_id=transaction.chest_id,
 						promotion_id=transaction.promotion_id,
 						quantity=1
 					)
 					# Метрики
-					gold_spent_total.inc(transaction.amount)
+					gold_spent_total.inc(transaction.cost)
 					successful_purchases_total.inc()
 
 					if transaction.chest_id:
@@ -220,14 +212,14 @@ def initiate_compensation(transaction):
 	compensate_command = {
 		'transaction_id': str(transaction.id),
 		'user_id': transaction.user_id,
-		'amount': transaction.amount,
+		'cost': transaction.cost,
 		'currency_type': transaction.currency_type
 	}
 
 	try:
 		producer = get_producer()
 		producer.produce(
-			'balance-compensate-commands',
+			'shop.balance.compensate.request.auth',
 			json.dumps(compensate_command, ensure_ascii=False).encode('utf-8')
 		)
 		producer.flush()
@@ -244,7 +236,7 @@ def initiate_compensation(transaction):
 
 def handle_compensation_response(message):
 	try:
-		data = safe_json_parse(message)
+		data = safe_json_decode(message)
 		if not data:
 			logger.warning("Empty or invalid compensation response")
 			return
@@ -257,7 +249,7 @@ def handle_compensation_response(message):
 			logger.error(f"Invalid transaction in compensation: {str(e)}")
 			return
 
-		if data.get('success'):
+		if data.get('success') is True:
 			transaction.status = 'COMPENSATED'
 			logger.info(f"Transaction compensated: {transaction.id}")
 		else:
@@ -296,7 +288,7 @@ def publish_promotion_compensation(user_id: int, amount: int, item_id: int, role
 
 def handle_promotion_compensation_response(message):
 	try:
-		data = safe_json_parse(message)
+		data = safe_json_decode(message)
 		if not data:
 			logger.warning("Invalid compensation response")
 			return

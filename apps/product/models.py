@@ -22,13 +22,9 @@ class Product(models.Model):
 	def __str__(self):
 		return self.name
 
-	@property
-	def is_available(self):
-		return self.cost is not None
-
 	def check_daily_purchase_limit(self, user_id):
 		if self.daily_purchase_limit is None:
-			return True  # Нет индивидуального лимита
+			return True
 
 		from datetime import datetime, timedelta
 		from django.utils import timezone
