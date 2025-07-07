@@ -1,17 +1,51 @@
-#!/bin/sh
+#!/bin/bash
+set -e
 
-/wait-for-postgres.sh db
-echo "🟢 PostgreSQL is up"
+host=${POSTGRES_HOST:-shop-db-1}
+user=${POSTGRES_USER:-postgres}
+db=${POSTGRES_DB:-postgres}
+password=${POSTGRES_PASSWORD:-password}
 
-python manage.py migrate --noinput
+echo "⏳ Ожидаем PostgreSQL на $host..."
+until PGPASSWORD=$password psql -h "$host" -U "$user" -d "$db" -c "SELECT 1" >/dev/null 2>&1; do
+  echo "PostgreSQL не доступна, ждем..."
+  sleep 1
+done
+echo "🟢 PostgreSQL доступна"
 
-# Run both consumers in the background
-echo "🔄 Starting saga consumer..."
-python manage.py run_saga_consumer &
+echo "⏳ Ожидаем Redis..."
+until redis-cli -h redis ping | grep -q PONG; do
+  echo "Redis не доступен, ждем..."
+  sleep 1
+done
+echo "🟢 Redis доступен"
 
-echo "🔄 Starting product consumer..."
-python manage.py run_product_consumer &
+# ✅ Выполняем миграции только если указано переменной
+if [ "$RUN_MIGRATIONS" = "1" ]; then
+  echo "🔧 Применяем миграции..."
+  python manage.py makemigrations --noinput || true
+  python manage.py migrate --noinput
+  echo "📁 Собираем статику..."
+  python manage.py collectstatic --noinput
+fi
 
-# Run the Django app via Gunicorn
-echo "🚀 Starting Gunicorn..."
-exec gunicorn config.wsgi:application --bind 0.0.0.0:8000
+# Запуск нужной команды
+if [ "$1" = "gunicorn" ]; then
+  echo "🚀 Запускаем Gunicorn..."
+  exec gunicorn config.wsgi:application --bind 0.0.0.0:8000
+
+elif [ "$1" = "celery" ]; then
+  echo "🚀 Запускаем Celery worker..."
+  exec celery -A config worker --loglevel=info
+
+elif [ "$1" = "beat" ]; then
+  echo "📌 Применяем миграции вручную перед запуском beat..."
+  python manage.py migrate --noinput
+  echo "🚀 Запускаем Celery beat..."
+  exec celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+
+else
+  echo "❌ Неизвестная команда: $1"
+  exit 1
+fi

@@ -2,23 +2,35 @@
 
 
 ```dotenv
+# Django
 DEBUG=False
 SECRET_KEY=your-secret-key-here
 
+# Postgres
 POSTGRES_USER=shop_user
 POSTGRES_PASSWORD=your_password
 POSTGRES_DB=your_database_name
 POSTGRES_HOST=shop-db-1
 POSTGRES_PORT=5432
 
-KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+# Kafka (внешний)
+KAFKA_BOOTSTRAP_SERVERS=37.9.53.228:9092
 KAFKA_PURCHASE_TOPIC=purchase-events
 KAFKA_TOPIC_AUTH_RESERVE=auth-reserve
 KAFKA_TOPIC_INVENTORY_ADD=inventory-add
 KAFKA_TOPIC_AUTH_COMMIT=auth-commit
+KAFKA_SCOREBOARD_TOPIC=prod.shop.fact.chest-open.1
+KAFKA_PRODUCT_GROUP=inventory-group
+KAFKA_PRODUCT_TOPIC=shop.inventory.updates
 
-SCOREBOARD_SERVICE_URL=http://7group_IP/api/purchases/
-INVENTORY_SERVICE_URL=http://inventory/api
+# Celery (REDIS)
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+# CORS
+CORS_ALLOWED_ORIGINS=http://CLI_IP:CLI_PORT
+
+INVENTORY_SERVICE_URL=http://37.9.53.107/
 ```
 
 # Shop Microservice

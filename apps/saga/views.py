@@ -1,53 +1,43 @@
-# views.py
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.http import HttpResponseBadRequest
-from django.shortcuts import get_object_or_404
 import time
-from .models import SagaOrchestrator
+
+from apps.saga.models import Transaction
+from rest_framework.reverse import reverse
 
 
 class TransactionStatusView(APIView):
-	"""
-	Long Polling endpoint для проверки статуса транзакции.
-	Держит соединение открытым до изменения статуса или таймаута.
-	"""
+	permission_classes = [IsAuthenticated]
 
-	def get(self, request):
-		transaction_id = request.query_params.get('transaction_id')
-		timeout = int(request.query_params.get('timeout', 30))  # Таймаут по умолчанию 30 сек
+	def get(self, request, *args, **kwargs):
+		transaction_id = request.query_params.get('transaction_id') or kwargs.get('transaction_id')
 
 		if not transaction_id:
-			return HttpResponseBadRequest("Transaction ID is required")
+			return Response(
+				{"error": "transaction_id parameter is required"},
+				status=status.HTTP_400_BAD_REQUEST
+			)
 
 		try:
-			saga = get_object_or_404(SagaOrchestrator, transaction_id=transaction_id)
-
-			# Если статус уже финальный, возвращаем сразу
-			if saga.status not in ['processing', 'compensating']:
-				return Response(saga.get_status_data())
-
-			# Long Polling цикл
-			start_time = time.time()
-			check_interval = 0.5  # Проверяем каждые 0.5 секунды
-
-			while time.time() - start_time < timeout:
-				saga.refresh_from_db()
-				if saga.status not in ['processing', 'compensating']:
-					return Response(saga.get_status_data())
-				time.sleep(check_interval)
-
-			# Если таймаут истек
-			return Response({
-				"transaction_id": transaction_id,
-				"status": "timeout",
-				"message": "Long polling timeout reached",
-				"current_status": saga.status
-			}, status=status.HTTP_200_OK)
-
-		except Exception as e:
-			return Response(
-				{"error": str(e)},
-				status=status.HTTP_500_INTERNAL_SERVER_ERROR
+			transaction = Transaction.objects.get(
+				id=transaction_id,
+				user_id=request.user.id
 			)
+		except Transaction.DoesNotExist:
+			return Response(
+				{"error": "Transaction not found or access denied"},
+				status=status.HTTP_404_NOT_FOUND
+			)
+		except ValueError:
+			return Response(
+				{"error": "Invalid transaction_id format"},
+				status=status.HTTP_400_BAD_REQUEST
+			)
+
+		return Response({
+			"status": transaction.status,
+			"error_message": transaction.error_message,
+			"data": transaction.inventory_data,
+		})

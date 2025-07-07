@@ -1,22 +1,25 @@
 from django.db import models
-
+import django.utils.timezone as timezone
 
 # Create your models here.
 class Promotion(models.Model):
-    name = models.CharField(max_length=100)
-    start_time = models.DateTimeField(auto_now_add=True)
-    duration = models.DurationField()
-    # products = models.ManyToManyField("Item", blank=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+	name = models.CharField(max_length=255)
+	description = models.TextField(null=True, blank=True)
+	start_date = models.DateTimeField(default=timezone.now)
+	duration = models.DurationField()
+	manually_disabled = models.BooleanField(default=False)
+	compensation_done = models.BooleanField(default=False)
 
-    def __str__(self):
-        end_time = self.start_time + self.duration
-        total_products = self.products.count()
-        total_chests = self.chests.count()
+	@property 
+	def end_date(self):
+		return self.start_date + self.duration
 
-        return (
-            f"{self.name} | {self.start_time.date()} → {end_time.date()} | "
-            f"Price: {self.price} | Items: {total_products} | Chests: {total_chests}"
-        )
+	def is_active(self):
+		now = timezone.now()
+		return self.start_date <= now <= self.end_date and not self.manually_disabled
 
-
+	def __str__(self):
+			return f"{self.name} (Active: {self.is_active()})"
+		
+	def has_ended(self):
+		return timezone.now() > self.end_date
