@@ -166,6 +166,7 @@ def handle_authorization_response(message):
 			except Exception as e:
 				logger.error(f"Error calling inventory service: {str(e)}")
 				transaction.status = 'FAILED'
+				failed_purchases_total.inc()
 				transaction.error_message = str(e)
 				initiate_compensation(transaction)
 
