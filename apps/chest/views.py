@@ -102,43 +102,45 @@ class ChestBuyView(APIView):
 
 
 class OpenChestView(APIView):
-	def post(self, request):
-		auth_header = request.META.get('HTTP_BEARER', '')
+    def post(self, request):
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
 
-		# TODO
-		# if not auth_header.startswith('Bearer '):
-		#     return Response(
-		#         {"error": "Invalid authorization header"},
-		#         status=status.HTTP_401_UNAUTHORIZED
-		#     )
+        if not auth_header.startswith('Bearer '):
+            return Response(
+                {"error": "Invalid authorization header"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
-		token = auth_header
+        if auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+        else:
+            token = auth_header.strip()
 
-		try:
-			payload = jwt.decode(token, options={"verify_signature": False})
-			user_id = payload['identity']
-		except (jwt.DecodeError, KeyError):
-			return Response(
-				{"error": "Invalid token format"},
-				status=status.HTTP_400_BAD_REQUEST
-			)
-		logger.info(f"{request.data}")
+        try:
+            payload = jwt.decode(token, options={"verify_signature": False})
+            user_id = payload['identity']
+        except (jwt.DecodeError, KeyError):
+            return Response(
+                {"error": "Invalid token format"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        logger.info(f"{request.data}")
 
-		chest_id = request.data.get('chest_id')
-		amount = request.data.get('amount')
-		callback_url = request.data.get('callback_url')
+        chest_id = request.data.get('chest_id')
+        amount = request.data.get('amount')
+        callback_url = request.data.get('callback_url')
 
-		logger.info("Send task to open_chest_task")
+        logger.info("Send task to open_chest_task")
 
-		task = open_chest_task.delay(
-			chest_id=chest_id,
-			token=token,
-			user_id=user_id,
-			callback_url=callback_url,
-			amount=amount
-		)
+        task = open_chest_task.delay(
+            chest_id=chest_id,
+            token=token,
+            user_id=user_id,
+            callback_url=callback_url,
+            amount=amount
+        )
 
-		return Response(
-			{"task_id": task.id},
-			status=status.HTTP_202_ACCEPTED
-		)
+        return Response(
+            {"task_id": task.id},
+            status=status.HTTP_202_ACCEPTED
+        )
