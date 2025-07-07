@@ -69,12 +69,12 @@ def process_kafka_messages(self):
 
 			logger.info(f"[Kafka] Получено сообщение из топика {topic}: {data}")
 			try:
-        if topic == 'auth.balance.reserve.response.shop':
-          handle_authorization_response(msg)
-        elif topic == 'auth.balance.compensate.response.shop':
-          handle_compensation_response(msg)
-        elif topic == 'shop.inventory.updates':
-          handle_inventory_update(data)
+				if topic == 'auth.balance.reserve.response.shop':
+					handle_authorization_response(msg)
+				elif topic == 'auth.balance.compensate.response.shop':
+					handle_compensation_response(msg)
+				elif topic == 'shop.inventory.updates':
+					handle_inventory_update(data)
 				elif topic == 'balance-responses':
 					handle_authorization_response(msg)
 				elif topic == 'compensation-responses':
@@ -85,8 +85,8 @@ def process_kafka_messages(self):
 					handle_guild_war_match_result.delay(data)
 				elif topic == 'prod.scoreboard.fact.guild-war.1':
 					handle_guild_war_game_result.delay(data)
-        elif topic == 'promotion.compensation.commands':
-          handle_promotion_compensation_response(msg)
+				elif topic == 'promotion.compensation.commands':
+					handle_promotion_compensation_response(msg)
 				else:
 					logger.warning(f"[Kafka] Неизвестный топик: {topic}")
 			except Exception as e:
