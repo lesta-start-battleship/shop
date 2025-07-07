@@ -46,7 +46,7 @@ def open_chest_task(self, chest_id: int, token, user_id, callback_url, amount: i
             raise Exception("Inventory service error")
 
         # Open claimed chests
-        chest = Chest.objects.filter(id=chest_id).prefetch_related('product').first()
+        chest = Chest.objects.filter(item_id=chest_id).prefetch_related('product').first()
 
         rewards = open_chest(chest, amount)
         chests = rewards["promo_chests"]
@@ -181,8 +181,8 @@ def handle_guild_war_match_result(self, event: dict):
             chest = get_object_or_404(Chest, name=guild_war_chest_name)
             logger.info(f"got on handle_guild_war_match_result chest {chest}")
 
-            winner_data = {"products_id": {chest.id: 2}}
-            loser_data = {"products_id": {chest.id: 1}}
+            winner_data = {"products_id": {chest.item_id: 2}}
+            loser_data = {"products_id": {chest.item_id: 1}}
 
             task_group = group(
                 send_to_inventory_service.s(winner_data, winner_token),
@@ -201,7 +201,8 @@ def handle_guild_war_game_result(self, event: dict):
     loser_id = event.get("loser_id")
     event_type = event.get("event")
 
-    guild_war_finish_chest_name = "guild_war_finish"
+    guild_war_finish_winner_chest_name = "guild_war_finish_winner"
+    guild_war_finish_loser_chest_name = "guild_war_finish_loser"
 
     if event_type != "guild_war":
         return
@@ -216,21 +217,22 @@ def handle_guild_war_game_result(self, event: dict):
         winner_guild_ids = winner.json().get('value')
         loser_guild_ids = loser.json().get('value')
 
-        chest = get_object_or_404(Chest, name=guild_war_finish_chest_name)
+        chest_for_winner = get_object_or_404(Chest, name=guild_war_finish_winner_chest_name)
+        chest_chest_for_loser = get_object_or_404(Chest, name=guild_war_finish_loser_chest_name)
 
         if loser_guild_ids:
-            logger.info(f"Sending {chest.name} to {len(loser_guild_ids)} losers")
+            logger.info(f"Sending {chest_chest_for_loser.name} to {len(loser_guild_ids)} losers")
             with ThreadPoolExecutor() as executor:
                 list(executor.map(
-                    lambda user_id: send_guild_war_reward(user_id, chest.id, 1),
+                    lambda user_id: send_guild_war_reward(user_id, chest_chest_for_loser.item_id, 1),
                     loser_guild_ids
                 ))
 
         if winner_guild_ids:
-            logger.info(f"Sending {chest.name} to {len(winner_guild_ids)} winners")
+            logger.info(f"Sending {chest_for_winner.name} to {len(winner_guild_ids)} winners")
             with ThreadPoolExecutor() as executor:
                 list(executor.map(
-                    lambda user_id: send_guild_war_reward(user_id, chest.id, 3),
+                    lambda user_id: send_guild_war_reward(user_id, chest_for_winner.item_id, 3),
                     winner_guild_ids
                 ))
 
