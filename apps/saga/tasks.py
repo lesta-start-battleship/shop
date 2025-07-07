@@ -33,7 +33,7 @@ KAFKA_TOPICS = [
 
 KAFKA_CONFIG = {
     'bootstrap.servers': settings.KAFKA_BOOTSTRAP_SERVERS,
-    'group.id': 'shop-consumer-group',
+    'group.id': 'shop-consumer-group-1',
     'auto.offset.reset': 'earliest',
 }
 

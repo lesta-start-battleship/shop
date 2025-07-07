@@ -3,6 +3,8 @@ import logging
 import requests
 import random
 from django.conf import settings
+
+from config.settings import KAFKA_BOOTSTRAP_SERVERS, INVENTORY_SERVICE_URL
 from .models import Transaction
 from apps.promotion.external import InventoryService
 from confluent_kafka import Producer
@@ -27,12 +29,12 @@ def safe_json_decode(msg):
 
 
 def get_producer():
-	return Producer({'bootstrap.servers': settings.KAFKA_BOOTSTRAP_SERVERS})
+	return Producer({'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS})
 
 
 logger = logging.getLogger(__name__)
 
-http_session = requests.Session()
+
 
 
 def start_purchase(user_id, cost, currency_type, promotion_id=None, item_id=None, chest_id=None, token=None):
@@ -52,7 +54,7 @@ def start_purchase(user_id, cost, currency_type, promotion_id=None, item_id=None
 			currency_type=currency_type,
 			promotion_id=promotion_id,
 			status='PENDING',
-			token=token  # Сохраняем токен в таблице Transaction
+			token=token
 		)
 
 		inventory_data = {
@@ -109,7 +111,6 @@ def handle_authorization_response(message):
 			logger.info(f"Transaction reserved: {transaction.id}")
 
 			try:
-				# Извлекаем токен из объекта Transaction, а не из ответа
 				user_token = transaction.token
 				if not user_token:
 					raise ValueError("Token not found in transaction")
@@ -138,8 +139,7 @@ def handle_authorization_response(message):
 					raise ValueError("Transaction must have either item_id or chest_id")
 
 				with requests.Session() as http_session:
-					response = http_session.patch(
-						"http://37.9.53.107/inventory/add_item",
+					response = http_session.patch(f"{INVENTORY_SERVICE_URL}/inventory/add_item",
 						json=payload,
 						headers=headers,
 						timeout=5
@@ -178,20 +178,8 @@ def handle_authorization_response(message):
 			transaction.save()
 		else:
 			error_code = data.get('error_message')
-
-			error_messages = {
-				'user_not_found': 'User not found',
-				'insufficient_funds': 'Not enough currency in account',
-				'invalid_currency': 'Invalid currency type',
-				None: 'Authorization failed',
-				'null': 'Authorization failed'
-			}
-
 			transaction.status = 'FAILED'
-			transaction.error_message = error_messages.get(
-				error_code,
-				f"Authorization failed: {error_code}"
-			)
+			transaction.error_message = error_code,
 			transaction.save()
 
 			logger.warning(
