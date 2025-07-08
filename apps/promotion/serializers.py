@@ -4,10 +4,8 @@ from apps.chest.serializers import ChestSerializer
 from apps.product.serializers import ItemPromotionSerializer
 
 
-class PromotionSerializer(serializers.ModelSerializer):
+class BasePromotionSerializer(serializers.ModelSerializer):
     items_count = serializers.SerializerMethodField()
-    chests = ChestSerializer(many=True, read_only=True)
-    products = ItemPromotionSerializer(many=True, read_only=True)
     is_active = serializers.SerializerMethodField()
     end_date = serializers.SerializerMethodField()
 
@@ -18,8 +16,6 @@ class PromotionSerializer(serializers.ModelSerializer):
             "name",
             "start_date",
             "end_date",
-            "chests",
-            "products",
             "items_count",
             "is_active"
         ]
@@ -32,3 +28,11 @@ class PromotionSerializer(serializers.ModelSerializer):
     
     def get_end_date(self, obj):
         return obj.end_date
+
+
+class PublicPromotionSerializer(BasePromotionSerializer):
+    chests = ChestSerializer(many=True, read_only=True)
+    products = ItemPromotionSerializer(many=True, read_only=True)
+    
+    class Meta(BasePromotionSerializer.Meta):
+        fields = BasePromotionSerializer.Meta.fields + ["chests", "products"]

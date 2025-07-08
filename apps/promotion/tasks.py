@@ -1,8 +1,13 @@
 from celery import shared_task
+
 from django.utils import timezone
+from django.db.models import ExpressionWrapper, F, DateTimeField
+
 from .models import Promotion
 from .services import compensate_promotion
+
 import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +15,9 @@ logger = logging.getLogger(__name__)
 def check_and_compensate_expired_promotions():
     logger.info("Started compensation check for expired promotions.")
     
-    expired_promos = Promotion.objects.filter(end_date__lt=timezone.now(), compensation_done=False)
+    expired_promos = Promotion.objects.annotate(
+        end_date_db=ExpressionWrapper(F('start_date') + F('duration'), output_field=DateTimeField())
+    ).filter(end_date__lt=timezone.now(), compensation_done=False)
     
     for promo in expired_promos:
         logger.info(f"Processing compensation for Promotion ID: {promo.id} - {promo.name}")
@@ -23,9 +30,11 @@ def check_and_compensate_expired_promotions():
             
 @shared_task
 def clean_up_expired_promotions():
-    expired_promotions = Promotion.objects.filter(
-        end_time__lte=timezone.now(),
-        compensation_done=True  # Ensure compensation finished
+    expired_promotions = Promotion.objects.annotate(
+        end_date_db=ExpressionWrapper(F('start_date') + F('duration'), output_field=DateTimeField())
+    ).filter(
+        end_date_db__lte=timezone.now(),
+        manually_disabled=False
     )
 
     for promo in expired_promotions:

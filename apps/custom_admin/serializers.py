@@ -1,7 +1,10 @@
 from rest_framework import serializers
 from apps.chest.models import Chest
+from apps.chest.serializers import ChestSerializer
 from apps.product.models import Product
-from apps.promotion.models import Promotion
+from apps.product.serializers import ItemPromotionSerializer
+from apps.promotion.serializers import BasePromotionSerializer
+
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
@@ -96,6 +99,8 @@ class AdminProductSerializer(serializers.ModelSerializer):
 
 
 class AdminPromotionSerializer(serializers.ModelSerializer):
-	class Meta:
-		model = Promotion
-		fields = ['id', 'name', 'description', 'start_date', 'duration', 'manually_disabled', 'compensation_done']
+    chests = ChestSerializer(many=True, read_only=True)
+    products = ItemPromotionSerializer(many=True, read_only=True)
+    
+    class Meta(BasePromotionSerializer.Meta):
+        fields = BasePromotionSerializer.Meta.fields + ["chests", "products"]

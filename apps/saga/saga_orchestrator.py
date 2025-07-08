@@ -122,7 +122,7 @@ def handle_authorization_response(message):
 					'item_id': transaction.item_id,
 					'amount': 1
 				}
-
+				logger.info(f"Transaction started. Token {user_token}")
 				with requests.Session() as http_session:
 					response = http_session.patch(
 						f"{INVENTORY_SERVICE_URL}/inventory/add_item",
@@ -130,7 +130,7 @@ def handle_authorization_response(message):
 						headers=headers,
 						timeout=5
 					)
-
+				logger.info(response)	
 				if response.status_code == 200:
 					transaction.status = 'COMPLETED'
 					logger.info(f"Transaction completed: {transaction.id}")
@@ -145,7 +145,7 @@ def handle_authorization_response(message):
 					if transaction.promotion_id is not None:
 						successful_promo_purchases_total.inc()
 
-					logger.info(f"✅ Purchase created after successful transaction: {purchase}")
+					logger.info(f"✅ Purchase created after successful transaction {purchase}")
 				else:
 					raise Exception(f"Inventory error: {response.status_code} - {response.text}")
 
