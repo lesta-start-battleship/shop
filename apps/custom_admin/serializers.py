@@ -45,6 +45,11 @@ class AdminProductSerializer(serializers.ModelSerializer):
 			raise serializers.ValidationError("Поле 'description' нельзя изменять.")
 		return value
 
+	def validate_currency_type(self, value):
+		if self.instance and value != self.instance.currency_type:
+			raise serializers.ValidationError("Поле 'currency_type' нельзя изменять.")
+		return value
+
 	def create(self, validated_data):
 		raise serializers.ValidationError("Создание новых предметов запрещено.")
 

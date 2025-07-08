@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Chest
 from apps.product.models import Product
 
+
 class ProductSummarySerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Product
@@ -27,6 +28,10 @@ class ChestSerializer(serializers.ModelSerializer):
 
 	def get_products(self, obj):
 		return ProductSummarySerializer(obj.product.all(), many=True, context=self.context).data
+
+	def get_special_products(self, obj):
+		from apps.product.serializers import ItemSerializer
+		return ItemSerializer(obj.special_products.all(), many=True, context=self.context).data
 
 
 class ChestOpenSerializer(serializers.Serializer):

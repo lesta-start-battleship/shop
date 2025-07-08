@@ -15,33 +15,62 @@ logger = logging.getLogger(__name__)
 
 
 def open_chest(chest: Chest, amount: int):
-    # TODO product.id change to product.item_id
     logger.info(f"Opening chest {chest.name}")
-    chance = int(chest.item_probability)
-    chest_products = list(chest.product.all())
-    gold = int(chest.gold)
+
     amount = int(amount)
+
     rewards = {
         "products_id": defaultdict(int),
         "gold": 0,
-        "callback_rewards": {},
+        # TODO if cli ask
+        # "callback_rewards": {},
         "promo_chests": []
     }
-    for i in range(0, amount):
-        if random.randrange(100) < chance:
-            product = random.choice(chest_products)
-            rewards["products_id"][product.id] += 1
-            if product.name in rewards["callback_rewards"]:
-                rewards["callback_rewards"][product.name]["amount"] += 1
-            else:
-                rewards["callback_rewards"][product.name] = {
-                    "amount": 1,
-                    "description": product.description
-                }
-        if chest.promotion:
-            promo_id = chest.promotion.id
-            rewards["promo_chests"].append((promo_id, chest.experience))
-        rewards["gold"] += gold
+
+    common_products = list(chest.product.all())
+
+    if chest.name == "Чёрной жемчужины":
+        # Get items
+        special_products = list(chest.special_products.all())
+
+        deep_converter = next((p for p in special_products if "Глубинный преобразователь" in p.name), None)
+        spies = next((p for p in special_products if "Шпионы Совета Братства" in p.name), None)
+
+        for _ in range(amount):
+            exp = 0
+            roll = random.randint(1, 100)
+            if roll <= 25:
+                # Standard item
+                product = random.choice(common_products)
+                rewards["products_id"][product.item_id] += 1
+            elif roll <= 50:
+                # Experience
+                exp = 10
+            elif roll <= 75 and deep_converter:
+                # Deep converter
+                rewards["products_id"][deep_converter.item_id] += 1
+            elif roll > 75 and spies:
+                # Spies
+                rewards["products_id"][spies.item_id] += 1
+            rewards["promo_chests"].append((chest.promotion.id, exp))
+    else:
+        chance = int(chest.item_probability)
+        gold = int(chest.gold)
+        for _ in range(amount):
+            if random.randrange(100) < chance:
+                product = random.choice(common_products)
+                rewards["products_id"][product.item_id] += 1
+            #     if product.name in rewards["callback_rewards"]:
+            #         rewards["callback_rewards"][product.name]["amount"] += 1
+            #     else:
+            #         rewards["callback_rewards"][product.name] = {
+            #             "amount": 1,
+            #             "description": product.description
+            #         }
+            if chest.promotion:
+                promo_id = chest.promotion.id
+                rewards["promo_chests"].append((promo_id, chest.experience))
+            rewards["gold"] += gold
 
     logger.info(f"Got {rewards} from {chest.name}")
     return rewards
