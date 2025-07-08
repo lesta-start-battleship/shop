@@ -98,7 +98,7 @@ class AdminProductSerializer(serializers.ModelSerializer):
 		raise serializers.ValidationError("Создание новых предметов запрещено.")
 
 
-class AdminPromotionSerializer(serializers.ModelSerializer):
+class AdminPromotionSerializer(BasePromotionSerializer):
     chests = ChestSerializer(many=True, read_only=True)
     products = ItemPromotionSerializer(many=True, read_only=True)
     

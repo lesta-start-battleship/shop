@@ -28,14 +28,12 @@ def open_chest(chest: Chest, amount: int):
     }
 
     common_products = list(chest.product.all())
-
     if chest.name == "Чёрной жемчужины":
         # Get items
         special_products = list(chest.special_products.all())
 
         deep_converter = next((p for p in special_products if "Глубинный преобразователь" in p.name), None)
         spies = next((p for p in special_products if "Шпионы Совета Братства" in p.name), None)
-
         for _ in range(amount):
             exp = 0
             roll = random.randint(1, 100)
@@ -52,7 +50,8 @@ def open_chest(chest: Chest, amount: int):
             elif roll > 75 and spies:
                 # Spies
                 rewards["products_id"][spies.item_id] += 1
-            rewards["promo_chests"].append((chest.promotion.id, exp))
+            if chest.promotion:
+                rewards["promo_chests"].append((chest.promotion.id, exp))
     else:
         chance = int(chest.item_probability)
         gold = int(chest.gold)

@@ -24,7 +24,7 @@ class Chest(models.Model):
 		related_name="chest_promotion",
 		blank=True
 	)
-	item_probability = models.IntegerField(validators=[MaxValueValidator(100), MinValueValidator(1)])
+	item_probability = models.IntegerField(validators=[MaxValueValidator(100), MinValueValidator(0)])
 	currency_type = models.CharField(max_length=16, choices=ChestCurrency.choices, default=ChestCurrency.gold)
 	cost = models.IntegerField(default=1)
 	experience = models.IntegerField(validators=[MaxValueValidator(100), MinValueValidator(0)], blank=True, null=True)

@@ -166,10 +166,14 @@ def send_chest_event_to_kafka(self, chests, user_id):
 
 @shared_task(bind=True)
 def handle_guild_war_match_result(self, event: dict):
+    logger.info(f"winner {event}")
     winner_id = event.get("winner_id")
     loser_id = event.get("loser_id")
     match_type = event.get("match_type")
     guild_war_chest_name = "участник Гильдейской войны"
+
+    if match_type != "guild_war":
+        return
 
     logger.info(f"winner {winner_id}, loser {loser_id}, match_type {match_type}")
 
@@ -177,18 +181,17 @@ def handle_guild_war_match_result(self, event: dict):
     loser_token = generate_token(loser_id)
 
     try:
-        if match_type == "guild_war_match":
-            chest = get_object_or_404(Chest, name=guild_war_chest_name)
-            logger.info(f"got on handle_guild_war_match_result chest {chest}")
+        chest = get_object_or_404(Chest, name=guild_war_chest_name)
+        logger.info(f"got on handle_guild_war_match_result chest {chest}")
 
-            winner_data = {"products_id": {chest.item_id: 2}}
-            loser_data = {"products_id": {chest.item_id: 1}}
+        winner_data = {"products_id": {chest.item_id: 2}}
+        loser_data = {"products_id": {chest.item_id: 1}}
 
-            task_group = group(
-                send_to_inventory_service.s(winner_data, winner_token),
-                send_to_inventory_service.s(loser_data, loser_token)
-            )
-            task_group.apply_async()
+        task_group = group(
+            send_to_inventory_service.s(winner_data, winner_token),
+            send_to_inventory_service.s(loser_data, loser_token)
+        )
+        task_group.apply_async()
 
     except Exception as e:
         logger.error(f"Error: {str(e)}")
@@ -199,7 +202,7 @@ def handle_guild_war_match_result(self, event: dict):
 def handle_guild_war_game_result(self, event: dict):
     winner_id = event.get("winner_id")
     loser_id = event.get("loser_id")
-    event_type = event.get("event")
+    event_type = event.get("match_type")
 
     guild_war_finish_winner_chest_name = "Гильдейского чемпиона"
     guild_war_finish_loser_chest_name = "Гильдейского почёта"
