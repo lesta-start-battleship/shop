@@ -32,7 +32,14 @@ class Chest(models.Model):
     product = models.ManyToManyField(
         Product,
         blank=True,
-        related_name='products_in_chest'
+        related_name='products_in_chest',
+        help_text="Special items in chest"
+    )
+    special_products = models.ManyToManyField(
+        Product,
+        blank=True,
+        related_name='special_products_in_chest',
+        help_text="Special items in chest"
     )
     daily_purchase_limit = models.PositiveIntegerField(
         null=True,
