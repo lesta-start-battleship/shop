@@ -19,7 +19,6 @@ class Product(models.Model):
 		blank=True,
 		help_text="Максимальное количество покупок в день для этого предмета (null — без лимита)"
 	)
-	script = models.JSONField(blank=True, null=True, help_text="Скрипт действий предмета")
 	kind = models.CharField(max_length=50, blank=True, null=True, help_text="Тип предмета")
 
 	def __str__(self):

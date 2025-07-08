@@ -1,10 +1,16 @@
+import requests
+from django.conf import settings
+from django.http import Http404
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg import openapi
 from rest_framework import viewsets, generics, status
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from config.settings import INVENTORY_SERVICE_URL
 from .serializers import AdminChestSerializer, AdminProductSerializer, AdminPromotionSerializer
+from .utils import get_inventory_headers
 from ..chest.models import Chest
 from .permissions import IsAdmin
 from ..product.models import Product
@@ -14,17 +20,22 @@ from ..promotion.services import compensate_promotion
 
 from drf_yasg.utils import swagger_auto_schema
 
-from .utils import create_inventory_item, delete_inventory_item
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AdminChestViewSet(viewsets.ModelViewSet):
 	queryset = Chest.objects.all()
 	serializer_class = AdminChestSerializer
 	permission_classes = [IsAdmin]
+	lookup_field = 'item_id'
+	filter_backends = [DjangoFilterBackend]
+	filterset_fields = ['item_id', 'name']
 
 	@swagger_auto_schema(
 		operation_summary="List all chests",
-		operation_description="Returns a list of all chests in the system.",
+		operation_description="Returns a list of all chests in the system. Filter by item_id or name.",
 		responses={200: AdminChestSerializer(many=True)}
 	)
 	def list(self, request, *args, **kwargs):
@@ -32,7 +43,8 @@ class AdminChestViewSet(viewsets.ModelViewSet):
 
 	@swagger_auto_schema(
 		operation_summary="Create a new chest",
-		operation_description="Create and return a new chest.",
+		operation_description="Create chest in inventory and save to DB",
+		request_body=AdminChestSerializer,
 		responses={
 			201: AdminChestSerializer(),
 			400: "Bad Request",
@@ -44,25 +56,55 @@ class AdminChestViewSet(viewsets.ModelViewSet):
 		serializer.is_valid(raise_exception=True)
 
 		try:
-			item_id = create_inventory_item(request, serializer.validated_data)
-			if not item_id:
-				raise ValueError("Inventory service didn't return item ID")
-			serializer.save(item_id=item_id)
+			inventory_data = {
+				"name": serializer.validated_data['name'],
+				"description": f"Сундук: {serializer.validated_data['name']}",
+				"script": "chest_reward",
+				"use_limit": 0,
+				"cooldown": 0,
+				"kind": "расходник",
+				"shop_item_id": 1,
+				"properties": {
+					"gold": serializer.validated_data.get('gold', 0),
+					"experience": serializer.validated_data.get('experience', 0),
+					"reward_distribution": serializer.validated_data.get('reward_distribution', {})
+				}
+			}
+			response = requests.post(
+				f"{INVENTORY_SERVICE_URL}/items/create",
+				json=inventory_data,
+				headers=get_inventory_headers(request),
+				timeout=5
+			)
+			try:
+				response_data = response.json()
+				item_id = response_data.get('id')
 
-			headers = self.get_success_headers(serializer.data)
-			return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+				if item_id:
+					serializer.save(item_id=item_id)
+					return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+				elif 200 <= response.status_code < 300:
+					logger.warning("Inventory service returned success but no item ID")
+					return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+				else:
+					raise Exception(f"Inventory error: {response.text}")
+
+			except ValueError:
+				raise Exception("Invalid inventory service response")
 
 		except Exception as e:
+			logger.error(f"Chest creation failed: {str(e)}")
 			return Response(
 				{"error": str(e)},
-				status=status.HTTP_502_BAD_GATEWAY if "Inventory service" in str(e)
-				else status.HTTP_401_UNAUTHORIZED if "credentials" in str(e)
+				status=status.HTTP_502_BAD_GATEWAY if "Inventory" in str(e)
 				else status.HTTP_400_BAD_REQUEST
 			)
 
 	@swagger_auto_schema(
 		operation_summary="Retrieve a chest",
-		operation_description="Get a single chest by ID.",
+		operation_description="Get a single chest by item_id.",
 		responses={200: AdminChestSerializer()}
 	)
 	def retrieve(self, request, *args, **kwargs):
@@ -70,7 +112,7 @@ class AdminChestViewSet(viewsets.ModelViewSet):
 
 	@swagger_auto_schema(
 		operation_summary="Update a chest",
-		operation_description="Update chest details by ID.",
+		operation_description="Update chest details by item_id.",
 		responses={200: AdminChestSerializer()}
 	)
 	def update(self, request, *args, **kwargs):
@@ -78,19 +120,37 @@ class AdminChestViewSet(viewsets.ModelViewSet):
 
 	@swagger_auto_schema(
 		operation_summary="Delete a chest",
-		operation_description="Delete chest by ID.",
-		responses={204: openapi.Response(description='No content')}
+		operation_description="Delete chest from inventory and local DB by item_id",
+		responses={
+			204: "No content - successfully deleted",
+			404: "Chest not found",
+			502: "Inventory service error"
+		}
 	)
 	def destroy(self, request, *args, **kwargs):
-		instance = self.get_object()
-		item_id = instance.item_id
-
 		try:
-			delete_inventory_item(request, item_id)
-			self.perform_destroy(instance)
+			item_id = kwargs.get('item_id')
+			chest = Chest.objects.get(item_id=item_id)
+			response = requests.delete(
+				f"{INVENTORY_SERVICE_URL}/items/{item_id}",
+				headers=get_inventory_headers(request),
+				timeout=5
+			)
+			if response.status_code != 204:
+				error_msg = f"Inventory error: {response.status_code} - {response.text}"
+				logger.error(error_msg)
+				raise Exception(error_msg)
+			chest.delete()
 			return Response(status=status.HTTP_204_NO_CONTENT)
 
+		except Chest.DoesNotExist:
+			logger.warning(f"Chest with item_id={item_id} not found")
+			return Response(
+				{"error": "Chest not found"},
+				status=status.HTTP_404_NOT_FOUND
+			)
 		except Exception as e:
+			logger.error(f"Chest deletion failed: {str(e)}")
 			return Response(
 				{"error": str(e)},
 				status=status.HTTP_502_BAD_GATEWAY
@@ -98,9 +158,12 @@ class AdminChestViewSet(viewsets.ModelViewSet):
 
 
 class AdminProductListAPIView(generics.ListAPIView):
-	permission_classes = [IsAdmin]
-	serializer_class = AdminProductSerializer
 	queryset = Product.objects.all()
+	serializer_class = AdminProductSerializer
+	permission_classes = [IsAdmin]
+	lookup_field = 'item_id'
+	filter_backends = [DjangoFilterBackend]
+	filterset_fields = ['item_id', 'name']
 
 	@swagger_auto_schema(
 		operation_summary="List all products",
@@ -115,7 +178,7 @@ class AdminProductAPIView(generics.RetrieveUpdateDestroyAPIView):
 	permission_classes = [IsAdmin]
 	serializer_class = AdminProductSerializer
 	queryset = Product.objects.all()
-	lookup_field = 'pk'
+	lookup_field = 'item_id'
 
 	def get_object(self):
 		try:

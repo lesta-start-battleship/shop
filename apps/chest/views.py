@@ -2,13 +2,15 @@ import logging
 import jwt
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, status, filters
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from rest_framework.reverse import reverse
 from .models import Chest
-from .serializers import ChestSerializer
+from .serializers import ChestSerializer, ChestOpenSerializer
 from apps.saga.saga_orchestrator import start_purchase
 from apps.chest.tasks import open_chest_task
 
@@ -18,7 +20,7 @@ logger = logging.getLogger(__name__)
 class ChestListView(generics.ListAPIView):
 	serializer_class = ChestSerializer
 	filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
-	search_fields = ['name', 'description']
+	search_fields = ['name']
 	ordering_fields = ['name', 'created_at']
 	ordering = ['name']
 
@@ -26,12 +28,16 @@ class ChestListView(generics.ListAPIView):
 		return Chest.objects.all().prefetch_related('product')
 
 
+
+
+
 class ChestDetailView(generics.RetrieveAPIView):
 	queryset = Chest.objects.all()
 	serializer_class = ChestSerializer
+	lookup_field = 'item_id'
 
 	def retrieve(self, request, *args, **kwargs):
-		item_id = kwargs.get("pk")
+		item_id = kwargs.get("item_id")
 		cache_key = f"chest:detail:{item_id}"
 
 		cached_data = cache.get(cache_key)
@@ -39,14 +45,13 @@ class ChestDetailView(generics.RetrieveAPIView):
 			return Response(cached_data)
 
 		response = super().retrieve(request, *args, **kwargs)
-
 		cache.set(cache_key, response.data, timeout=60 * 10)
 
 		return response
 
 
 class ChestBuyView(APIView):
-	def post(self, request, chest_id):
+	def post(self, request, item_id):
 		user = request.user
 
 		if not user.id:
@@ -54,8 +59,8 @@ class ChestBuyView(APIView):
 				{"error": "ID пользователя отсутствует или неверный"},
 				status=status.HTTP_400_BAD_REQUEST
 			)
+		chest = get_object_or_404(Chest, item_id=item_id)
 
-		chest = get_object_or_404(Chest, id=chest_id)
 		if not chest.check_daily_purchase_limit(user.id):
 			return Response(
 				{"error": "Превышен дневной лимит для этого сундука"},
@@ -94,12 +99,19 @@ class ChestBuyView(APIView):
 		return Response({
 			"status": "purchase_started",
 			"transaction_id": str(transaction.id),
-			"status_url": status_url
+			"status_url": request.build_absolute_uri(status_url)
 		}, status=status.HTTP_202_ACCEPTED)
 
 
 class OpenChestView(APIView):
+
+	@swagger_auto_schema(
+		operation_summary="Open chests",
+		operation_description="Open chests in inventory",
+		responses={202: ChestOpenSerializer(many=True)}
+	)
 	def post(self, request):
+
 		auth_header = request.META.get('HTTP_AUTHORIZATION', '')
 
 		if not auth_header.startswith('Bearer '):
@@ -115,7 +127,7 @@ class OpenChestView(APIView):
 
 		try:
 			payload = jwt.decode(token, options={"verify_signature": False})
-			user_id = payload['identity']
+			user_id = payload['sub']
 		except (jwt.DecodeError, KeyError):
 			return Response(
 				{"error": "Invalid token format"},
@@ -123,9 +135,13 @@ class OpenChestView(APIView):
 			)
 		logger.info(f"{request.data}")
 
-		chest_id = request.data.get('chest_id')
-		amount = request.data.get('amount')
-		callback_url = request.data.get('callback_url')
+		serializer_in = ChestOpenSerializer(data=request.data)
+		serializer_in.is_valid(raise_exception=True)
+		data = serializer_in.validated_data
+
+		chest_id = data.get('item_id')
+		amount = data.get('amount')
+		callback_url = data.get('callback_url')
 
 		logger.info("Send task to open_chest_task")
 

@@ -1,29 +1,39 @@
 from rest_framework import serializers
 from apps.chest.models import Chest
 from apps.product.models import Product
-from apps.product.serializers import ProductSerializer
 from apps.promotion.models import Promotion
 
 
-class AdminChestProductSerializer(serializers.ModelSerializer):
-	class Meta:
-		model = Product
-		fields = ['item_id']
-
-
 class AdminChestSerializer(serializers.ModelSerializer):
-	products = AdminChestProductSerializer(many=True)
+	products = serializers.PrimaryKeyRelatedField(
+		queryset=Product.objects.all(),
+		many=True,
+		required=False
+	)
 
 	class Meta:
 		model = Chest
-		fields = ["id", "name", "gold", "promotion", "item_probability", "currency_type", "cost", "experience",
-				  "products"]
+		fields = [
+			"item_id", "name", "gold", "promotion", "item_probability",
+			"currency_type", "cost", "experience", "products",
+			"daily_purchase_limit", "reward_distribution"
+		]
+		extra_kwargs = {
+			'item_id': {'read_only': True}  # item_id нельзя задавать вручную
+		}
+
+	def create(self, validated_data):
+		products = validated_data.pop('products', [])
+		chest = Chest.objects.create(**validated_data)
+		if products:
+			chest.product.set(products)
+		return chest
 
 
 class AdminProductSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Product
-		fields = ['id', 'name', 'description', 'currency_type', 'cost', 'promotion', 'daily_purchase_limit']
+		fields = ['item_id', 'name', 'description', 'currency_type', 'cost', 'promotion', 'daily_purchase_limit']
 
 	def validate_name(self, value):
 		if self.instance and value != self.instance.name:
