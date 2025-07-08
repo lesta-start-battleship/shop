@@ -1,6 +1,5 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import permissions
 from drf_yasg.utils import swagger_auto_schema
 
 from .serializers import PurchaseSerializer
@@ -8,10 +7,9 @@ from .models import Purchase
 
 
 class PurchaseListAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_description="Получить список покупок текущего пользователя (заголовок X-User-ID обязателен).",
+        operation_description="Получить список покупок текущего пользователя.",
         responses={200: PurchaseSerializer(many=True)}
     )
     def get(self, request):

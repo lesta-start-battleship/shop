@@ -18,18 +18,6 @@ failed_purchases_total = Counter(
     'Total count of failed purchases'
 )
 
-# Кол-во успешно купленных сундуков
-successful_chest_purchases_total = Counter(
-    'shop_successful_chest_purchases_total',
-    'Total count of successful chest purchases'
-)
-
-# Кол-во успешно купленных продуктов (товаров)
-successful_product_purchases_total = Counter(
-    'shop_successful_product_purchases_total',
-    'Total count of successful product purchases'
-)
-
 # Кол-во успешно купленных товаров или сундуков по акции
 successful_promo_purchases_total = Counter(
     'shop_successful_promo_purchases_total',

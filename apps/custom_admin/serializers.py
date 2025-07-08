@@ -7,13 +7,33 @@ from apps.promotion.models import Promotion
 class ProductDetailSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Product
-		fields = ['name', 'description']  # Только нужные поля
+		fields = ['id', 'name', 'description']  # Полные данные для чтения
+
+
+class ProductIdSerializer(serializers.PrimaryKeyRelatedField):
+	def to_internal_value(self, data):
+		# Принимаем только ID продукта
+		return super().to_internal_value(data)
+
+	def to_representation(self, value):
+		# При отображении используем полный сериализатор
+		return ProductDetailSerializer(value, context=self.context).data
 
 
 class AdminChestSerializer(serializers.ModelSerializer):
+	# Для GET запросов - полные данные
 	products = ProductDetailSerializer(
 		many=True,
-		source='product',  # Используем related_name из модели Chest
+		source='product',
+		read_only=True
+	)
+
+	# Для записи - только ID продуктов
+	product_ids = ProductIdSerializer(
+		queryset=Product.objects.all(),
+		many=True,
+		write_only=True,
+		source='product',
 		required=False
 	)
 
@@ -35,21 +55,11 @@ class AdminChestSerializer(serializers.ModelSerializer):
 		}
 
 	def create(self, validated_data):
-		# Извлекаем данные продуктов (если есть)
-		products_data = validated_data.pop('product', [])
-
-		# Создаем сундук
+		# Обрабатываем продукты (уже как ID через product_ids)
+		products = validated_data.pop('product', [])
 		chest = Chest.objects.create(**validated_data)
 
-		# Обрабатываем продукты
-		if products_data:
-			products = []
-			for product_data in products_data:
-				product, _ = Product.objects.get_or_create(
-					name=product_data['name'],
-					defaults={'description': product_data['description']}
-				)
-				products.append(product)
+		if products:
 			chest.product.set(products)
 
 		return chest

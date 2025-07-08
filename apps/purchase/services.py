@@ -5,25 +5,10 @@ from apps.chest.models import Chest
 from apps.promotion.models import Promotion
 
 
-def create_purchase(owner_id: int, item_id=None, chest_id=None, promotion_id=None, quantity=1) -> Purchase:
-    if quantity <= 0:
-        raise ValidationError("Количество должно быть положительным.")
-
-    item = chest = promotion = None
-
-    if item_id:
-        if chest_id:
-            raise ValidationError("Нельзя одновременно указать и item, и chest.")
-        try:
-            item = Product.objects.get(id=item_id)
-        except Product.DoesNotExist:
-            raise ValidationError("Указанный item не существует")
-
-    elif chest_id:
-        chest = Chest.objects.get(id=chest_id)
-    else:
-        raise ValidationError("Должен быть указан либо item_id, либо chest_id.")
-
+def create_purchase(owner_id: int, item_id,promotion_id=None, quantity=1) -> Purchase:
+    item = Product.objects.get(item_id=item_id)
+    if item is None:
+        chest = Chest.objects.get(item_id=item_id)
     if promotion_id:
         promotion = Promotion.objects.get(id=promotion_id)
 
@@ -34,5 +19,4 @@ def create_purchase(owner_id: int, item_id=None, chest_id=None, promotion_id=Non
         promotion=promotion,
         quantity=quantity,
     )
-
     return purchase

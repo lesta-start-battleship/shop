@@ -64,7 +64,7 @@ class Chest(models.Model):
 
 		purchase_count = Transaction.objects.filter(
 			user_id=user_id,
-			chest_id=self.id,
+			item_id=self.item_id,
 			status__in=['PENDING', 'COMPLETED'],
 			created_at__gte=start_of_day,
 			created_at__lt=end_of_day

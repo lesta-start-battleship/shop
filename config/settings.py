@@ -5,7 +5,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "very-secret-key")
 DEBUG = os.getenv("DEBUG")
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(',')
+ALLOWED_HOSTS = "37.9.53.150", "37.9.53.217"
 
 INVENTORY_SERVICE_URL = os.getenv("INVENTORY_SERVICE_URL", "http://localhost")
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost")
@@ -122,7 +122,7 @@ LOGGING = {
 	'loggers': {
 		'django': {
 			'handlers': ['console'],
-			'level': 'DEBUG' if DEBUG else 'INFO',
+			'level': 'WARNING',
 			'propagate': False,
 		},
 		'apps.kafka': {

@@ -1,85 +1,72 @@
 # from django.test import TestCase
-# from django.utils import timezone
-# from datetime import timedelta
+# from rest_framework.test import APIClient
+# from rest_framework import status
+# from unittest.mock import MagicMock
 # from apps.chest.models import Chest
-# from apps.saga.models import Transaction
+# from apps.product.models import Product
 #
 #
-# class ChestModelTest(TestCase):
+# class ChestViewsTest(TestCase):
 #     def setUp(self):
-#         self.user_id = 1
+#         self.client = APIClient()
+#
+#         self.user_mock = MagicMock()
+#         self.user_mock.is_authenticated = True
+#         self.user_mock.role = "user"
+#         self.client.force_authenticate(user=self.user_mock)
+#
 #         self.chest = Chest.objects.create(
-#             name='Test Chest',
-#             gold=100,  # обязательное поле
-#             currency_type='gold',
+#             name="Starter Chest",
+#             gold=50,
+#             item_probability=0.5,
+#             cost=100,
+#             currency_type="gold",
+#             daily_purchase_limit=2,
 #             experience=10,
-#             reward_distribution={"gold": 100},
-#             daily_purchase_limit=2
 #         )
 #
-#     def test_check_daily_purchase_limit_allows_within_limit(self):
-#         Transaction.objects.create(
-#             user_id=self.user_id,
-#             chest_id=self.chest.id,
-#             amount=50,
-#             currency_type='gold',
-#             status='completed'
+#     def test_get_chest_list(self):
+#         response = self.client.get("/chest/")
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#
+#     def test_get_chest_detail(self):
+#         response = self.client.get(f"/chest/{self.chest.id}/")
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#
+#     def test_buy_chest_success(self):
+#         response = self.client.post(f"/chest/{self.chest.id}/buy/")
+#         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+#
+#     def test_buy_chest_limit_exceeded(self):
+#         # Покупаем дважды (лимит 2), потом третий раз — ошибка
+#         self.client.post(f"/chest/{self.chest.id}/buy/")
+#         self.client.post(f"/chest/{self.chest.id}/buy/")
+#         response = self.client.post(f"/chest/{self.chest.id}/buy/")
+#         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+#         self.assertIn("Превышен дневной лимит", response.json().get("error", ""))
+#
+#
+# class AdminProductTests(TestCase):
+#     def setUp(self):
+#         self.client = APIClient()
+#
+#         self.admin_mock = MagicMock()
+#         self.admin_mock.is_authenticated = True
+#         self.admin_mock.role = "admin"
+#         self.client.force_authenticate(user=self.admin_mock)
+#
+#         self.product = Product.objects.create(
+#             name="Epic Sword",
+#             description="Strong weapon",
+#             currency_type="gold",
+#             cost=500,
+#             daily_purchase_limit=3,
 #         )
-#         is_allowed = self.chest.check_daily_purchase_limit(self.user_id)
-#         self.assertTrue(is_allowed)
 #
-#     def test_check_daily_purchase_limit_blocks_over_limit(self):
-#         for _ in range(2):
-#             Transaction.objects.create(
-#                 user_id=self.user_id,
-#                 chest_id=self.chest.id,
-#                 amount=50,
-#                 currency_type='gold',
-#                 status='completed'
-#             )
-#         is_allowed = self.chest.check_daily_purchase_limit(self.user_id)
-#         self.assertFalse(is_allowed)
+#     def test_admin_can_get_product_list(self):
+#         response = self.client.get("/admin/products/")
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
 #
-#     def test_check_daily_purchase_limit_ignores_other_users(self):
-#         for _ in range(2):
-#             Transaction.objects.create(
-#                 user_id=self.user_id,
-#                 chest_id=self.chest.id,
-#                 amount=50,
-#                 currency_type='gold',
-#                 status='completed'
-#             )
-#         is_allowed_other = self.chest.check_daily_purchase_limit(user_id=999)
-#         self.assertTrue(is_allowed_other)
-#
-#     def test_check_daily_purchase_limit_ignores_old_transactions(self):
-#         past_time = timezone.now() - timedelta(days=1)
-#         Transaction.objects.create(
-#             user_id=self.user_id,
-#             chest_id=self.chest.id,
-#             amount=50,
-#             currency_type='gold',
-#             status='completed',
-#             created_at=past_time
-#         )
-#         is_allowed = self.chest.check_daily_purchase_limit(self.user_id)
-#         self.assertTrue(is_allowed)
-#
-#     def test_check_daily_purchase_limit_allows_if_no_limit(self):
-#         chest_no_limit = Chest.objects.create(
-#             name='Unlimited Chest',
-#             gold=0,
-#             currency_type='silver',
-#             experience=0,
-#             reward_distribution={"silver": 100},
-#             daily_purchase_limit=None  # Без лимита
-#         )
-#         for _ in range(10):
-#             Transaction.objects.create(
-#                 user_id=self.user_id,
-#                 chest_id=chest_no_limit.id,
-#                 amount=1,
-#                 currency_type='silver',
-#                 status='completed'
-#             )
-#         self.assertTrue(chest_no_limit.check_daily_purchase_limit(self.user_id))
+#     def test_admin_can_get_product_detail(self):
+#         response = self.client.get(f"/admin/products/{self.product.id}/")
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
