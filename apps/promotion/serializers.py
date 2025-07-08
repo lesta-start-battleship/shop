@@ -9,6 +9,7 @@ class PromotionSerializer(serializers.ModelSerializer):
     chests = ChestSerializer(many=True, read_only=True)
     products = ItemPromotionSerializer(many=True, read_only=True)
     is_active = serializers.SerializerMethodField()
+    end_date = serializers.SerializerMethodField()
 
     class Meta:
         model = Promotion
@@ -28,3 +29,6 @@ class PromotionSerializer(serializers.ModelSerializer):
 
     def get_is_active(self, obj):
         return obj.is_active()
+    
+    def get_end_date(self, obj):
+        return obj.end_date
