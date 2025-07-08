@@ -23,3 +23,8 @@ class ChestSerializer(serializers.ModelSerializer):
     def get_products(self, obj):
         from apps.product.serializers import ProductSerializer
         return ProductSerializer(obj.product.all(), many=True, context=self.context).data
+
+
+class ChestOpenSerializer(serializers.Serializer):
+    item_id = serializers.IntegerField(required=True)
+    amount = serializers.IntegerField(required=True)

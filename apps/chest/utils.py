@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def open_chest(chest: Chest, amount: int):
+    # TODO product.id change to product.item_id
     logger.info(f"Opening chest {chest.name}")
     chance = int(chest.item_probability)
     chest_products = list(chest.product.all())
@@ -46,9 +47,9 @@ def open_chest(chest: Chest, amount: int):
     return rewards
 
 
-def generate_token(user_id, username="user", role="player"):
+def generate_token(user_id, username="user", role="user"):
     payload = {
-        "user_id": user_id,
+        "sub": user_id,
         "username": username,
         "role": role,
     }

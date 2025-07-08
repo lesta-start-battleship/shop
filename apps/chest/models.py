@@ -16,6 +16,7 @@ class ChestCurrency(TextChoices):
 class Chest(models.Model):
     gold = models.IntegerField(validators=[MinValueValidator(0)])
     name = models.CharField(max_length=128)
+    item_id = models.IntegerField(blank=True, null=True)
     promotion = models.ForeignKey(
         Promotion,
         on_delete=models.SET_NULL,
