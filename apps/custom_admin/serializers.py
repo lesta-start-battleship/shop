@@ -28,6 +28,11 @@ class AdminChestSerializer(serializers.ModelSerializer):
 		read_only=True
 	)
 
+	special_products = ProductDetailSerializer(
+		many=True,
+		read_only=True
+	)
+
 	# Для записи - только ID продуктов
 	product_ids = ProductIdSerializer(
 		queryset=Product.objects.all(),
@@ -37,9 +42,11 @@ class AdminChestSerializer(serializers.ModelSerializer):
 		required=False
 	)
 
-	special_products = ProductDetailSerializer(
+	special_products_ids = ProductIdSerializer(
+		queryset=Product.objects.all(),
 		many=True,
-		source='product',  # Используем related_name из модели Chest
+		write_only=True,
+		source='special_products',
 		required=False
 	)
 
@@ -47,7 +54,7 @@ class AdminChestSerializer(serializers.ModelSerializer):
 		model = Chest
 		fields = [
 			"item_id", "name", "gold", "promotion", "item_probability",
-			"currency_type", "cost", "experience", "products", 'product_ids', 'special_products',
+			"currency_type", "cost", "experience", "products", 'product_ids', 'special_products', 'special_products_ids',
 			"daily_purchase_limit", "reward_distribution"
 		]
 		extra_kwargs = {
@@ -57,10 +64,14 @@ class AdminChestSerializer(serializers.ModelSerializer):
 	def create(self, validated_data):
 		# Обрабатываем продукты (уже как ID через product_ids)
 		products = validated_data.pop('product', [])
+		special_products = validated_data.pop('special_products', [])
+
 		chest = Chest.objects.create(**validated_data)
 
 		if products:
 			chest.product.set(products)
+		if special_products:
+			chest.special_products.set(special_products)
 
 		return chest
 
