@@ -11,6 +11,7 @@ class ProductSummarySerializer(serializers.ModelSerializer):
 
 class ChestSerializer(serializers.ModelSerializer):
 	products = serializers.SerializerMethodField()
+	special_products = serializers.SerializerMethodField()
 
 	class Meta:
 		model = Chest
@@ -23,15 +24,15 @@ class ChestSerializer(serializers.ModelSerializer):
 			"currency_type",
 			"cost",
 			"experience",
-			"products"
+			"products",
+			"special_products"
 		]
 
 	def get_products(self, obj):
 		return ProductSummarySerializer(obj.product.all(), many=True, context=self.context).data
 
 	def get_special_products(self, obj):
-		from apps.product.serializers import ItemSerializer
-		return ItemSerializer(obj.special_products.all(), many=True, context=self.context).data
+		return ProductSummarySerializer(obj.special_products.all(), many=True, context=self.context).data
 
 
 class ChestOpenSerializer(serializers.Serializer):

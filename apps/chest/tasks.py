@@ -55,8 +55,8 @@ def open_chest_task(self, chest_id: int, token, user_id, callback_url, amount: i
         if chests:
             send_chest_event_to_kafka.delay(chests, user_id)
 
-        if callback_url:
-            send_callback.delay(rewards, callback_url, token)
+        # if callback_url:
+        #     send_callback.delay(rewards, callback_url, token)
 
     except Exception as e:
         logger.error(f"Error in open_chest_task: {str(e)}")
@@ -169,7 +169,7 @@ def handle_guild_war_match_result(self, event: dict):
     winner_id = event.get("winner_id")
     loser_id = event.get("loser_id")
     match_type = event.get("match_type")
-    guild_war_chest_name = "guild_war"
+    guild_war_chest_name = "участник Гильдейской войны"
 
     logger.info(f"winner {winner_id}, loser {loser_id}, match_type {match_type}")
 
@@ -201,13 +201,13 @@ def handle_guild_war_game_result(self, event: dict):
     loser_id = event.get("loser_id")
     event_type = event.get("event")
 
-    guild_war_finish_winner_chest_name = "guild_war_finish_winner"
-    guild_war_finish_loser_chest_name = "guild_war_finish_loser"
+    guild_war_finish_winner_chest_name = "Гильдейского чемпиона"
+    guild_war_finish_loser_chest_name = "Гильдейского почёта"
 
     if event_type != "guild_war":
         return
 
-    guild_members_url = f"{GUILD_API_URL}/api/v1/guild/member/"
+    guild_members_url = f"{GUILD_API_URL}/api/v1/guild/member/guild_id/"
 
     try:
         with requests.Session() as s:
