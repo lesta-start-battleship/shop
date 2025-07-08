@@ -25,7 +25,7 @@ class Purchase(models.Model):
         if self.item:
             return base + f"item #{self.item_id}, qty {self.quantity}"
         if self.chest:
-            return base + f"chest #{self.chest_id}, qty {self.quantity}"
+            return base + f"chest #{self.item_id}, qty {self.quantity}"
         return base + "unknown"
 
     def clean(self):

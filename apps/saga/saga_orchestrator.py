@@ -14,8 +14,6 @@ from prometheus_metrics import (
 	gold_spent_total,
 	successful_purchases_total,
 	failed_purchases_total,
-	successful_chest_purchases_total,
-	successful_product_purchases_total,
 	successful_promo_purchases_total,
 )
 from ..chest.models import Chest
@@ -144,12 +142,6 @@ def handle_authorization_response(message):
 					)
 					gold_spent_total.inc(transaction.cost)
 					successful_purchases_total.inc()
-
-					if Chest.objects.filter(item_id=transaction.item_id).exists():
-						successful_chest_purchases_total.inc()
-					else:
-						successful_product_purchases_total.inc()
-
 					if transaction.promotion_id is not None:
 						successful_promo_purchases_total.inc()
 
