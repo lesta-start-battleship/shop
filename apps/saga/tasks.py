@@ -9,32 +9,27 @@ from apps.chest.tasks import (
   handle_guild_war_match_result, 
   handle_guild_war_game_result,
 )
-from kafka.handlers import handle_inventory_update
 from .saga_orchestrator import (
     handle_authorization_response,
     handle_compensation_response,
     handle_promotion_compensation_response
 )
+from ..product.item_consumer import handle_inventory_update
 
 logger = logging.getLogger(__name__)
 
 KAFKA_TOPICS = [
     'auth.balance.reserve.response.shop',
     'auth.balance.compensate.response.shop',
-    'balance-reserve-events',
-    'balance-compensate-events',
-    'purchase-events',
-    'prod.shop.fact.chest-open.1',
     'shop.inventory.updates',
     'stage.game.fact.match-results.v1',
     'prod.scoreboard.fact.guild-war.1',
-    'shop.inventory.updates',
     'promotion.compensation.commands'
 ]
 
 KAFKA_CONFIG = {
     'bootstrap.servers': settings.KAFKA_BOOTSTRAP_SERVERS,
-    'group.id': 'shop-consumer-group',
+    'group.id': 'shop-consumer-group-2',
     'auto.offset.reset': 'earliest',
 }
 
@@ -72,12 +67,6 @@ def process_kafka_messages(self):
 				if topic == 'auth.balance.reserve.response.shop':
 					handle_authorization_response(msg)
 				elif topic == 'auth.balance.compensate.response.shop':
-					handle_compensation_response(msg)
-				elif topic == 'shop.inventory.updates':
-					handle_inventory_update(data)
-				elif topic == 'balance-responses':
-					handle_authorization_response(msg)
-				elif topic == 'compensation-responses':
 					handle_compensation_response(msg)
 				elif topic == 'shop.inventory.updates':
 					handle_inventory_update(data)

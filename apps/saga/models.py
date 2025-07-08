@@ -14,8 +14,7 @@ class Transaction(models.Model):
 
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 	user_id = models.IntegerField()
-	product_id = models.IntegerField(null=True, blank=True)
-	chest_id = models.IntegerField(null=True, blank=True)
+	item_id = models.IntegerField(null=True, blank=True)
 	cost = models.IntegerField()
 	currency_type = models.CharField(max_length=255)
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -27,10 +26,3 @@ class Transaction(models.Model):
 		default=dict
 	)
 	error_message = models.TextField(null=True, blank=True)
-
-	class Meta:
-		indexes = [
-			models.Index(fields=['status']),
-			models.Index(fields=['user_id']),
-			models.Index(fields=['created_at']),
-		]

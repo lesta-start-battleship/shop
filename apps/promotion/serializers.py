@@ -1,13 +1,13 @@
 from rest_framework import serializers
 from .models import Promotion
 from apps.chest.serializers import ChestSerializer
-from apps.product.serializers import ProductPromotionSerializer
+from apps.product.serializers import ItemPromotionSerializer
 
 
 class PromotionSerializer(serializers.ModelSerializer):
     items_count = serializers.SerializerMethodField()
     chests = ChestSerializer(many=True, read_only=True)
-    products = ProductPromotionSerializer(many=True, read_only=True)
+    products = ItemPromotionSerializer(many=True, read_only=True)
     is_active = serializers.SerializerMethodField()
 
     class Meta:

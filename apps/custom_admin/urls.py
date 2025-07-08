@@ -11,5 +11,5 @@ router.register('promotion', AdminPromotionViewSet, basename='promotion-admin')
 urlpatterns = [
 	path('', include(router.urls)),
 	path('products/', AdminProductListAPIView.as_view(), name='admin-product-list'),
-	path('products/<int:pk>/', AdminProductAPIView.as_view(), name='admin-product-detail'),
+	path('products/<int:item_id>/', AdminProductAPIView.as_view(), name='admin-product-detail'),
 ]

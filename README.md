@@ -16,12 +16,13 @@ POSTGRES_PORT=5432
 # Kafka (внешний)
 KAFKA_BOOTSTRAP_SERVERS=37.9.53.228:9092
 KAFKA_PURCHASE_TOPIC=purchase-events
-KAFKA_TOPIC_AUTH_RESERVE=auth-reserve
+KAFKA_TOPIC_AUTH_RESERVE=auth.balance.reserve.response.shop
 KAFKA_TOPIC_INVENTORY_ADD=inventory-add
 KAFKA_TOPIC_AUTH_COMMIT=auth-commit
 KAFKA_SCOREBOARD_TOPIC=prod.shop.fact.chest-open.1
 KAFKA_PRODUCT_GROUP=inventory-group
 KAFKA_PRODUCT_TOPIC=shop.inventory.updates
+KAFKA_CHEST_EVENTS_TOPIC=prod.shop.fact.chest-open.1
 
 # Celery (REDIS)
 REDIS_HOST=redis
