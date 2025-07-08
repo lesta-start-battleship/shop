@@ -67,7 +67,6 @@ def start_purchase(user_id, cost, currency_type, promotion_id=None, item_id=None
 			'user_id': user_id,
 			'cost': cost,
 			'currency_type': currency_type,
-			'token': token
 		}
 
 		producer = get_producer()
