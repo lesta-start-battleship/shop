@@ -14,6 +14,7 @@ class AdminChestSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Chest
 		fields = [
+			"id"
 			"item_id", "name", "gold", "promotion", "item_probability",
 			"currency_type", "cost", "experience", "products",
 			"daily_purchase_limit", "reward_distribution"
@@ -33,7 +34,7 @@ class AdminChestSerializer(serializers.ModelSerializer):
 class AdminProductSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Product
-		fields = ['item_id', 'name', 'description', 'currency_type', 'cost', 'promotion', 'daily_purchase_limit']
+		fields = ["id", 'item_id', 'name', 'description', 'currency_type', 'cost', 'promotion', 'daily_purchase_limit']
 
 	def validate_name(self, value):
 		if self.instance and value != self.instance.name:
@@ -43,11 +44,6 @@ class AdminProductSerializer(serializers.ModelSerializer):
 	def validate_description(self, value):
 		if self.instance and value != self.instance.description:
 			raise serializers.ValidationError("Поле 'description' нельзя изменять.")
-		return value
-
-	def validate_currency_type(self, value):
-		if self.instance and value != self.instance.currency_type:
-			raise serializers.ValidationError("Поле 'currency_type' нельзя изменять.")
 		return value
 
 	def create(self, validated_data):
