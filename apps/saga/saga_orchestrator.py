@@ -2,7 +2,7 @@ import json
 import logging
 import requests
 import random
-from django.conf import settings
+from django.core.cache import cache
 
 from config.settings import KAFKA_BOOTSTRAP_SERVERS, INVENTORY_SERVICE_URL
 from .models import Transaction
@@ -18,6 +18,7 @@ from prometheus_metrics import (
 	successful_product_purchases_total,
 	successful_promo_purchases_total,
 )
+from ..chest.models import Chest
 
 
 def safe_json_decode(msg):
@@ -35,38 +36,31 @@ def get_producer():
 logger = logging.getLogger(__name__)
 
 
-
-
-def start_purchase(user_id, cost, currency_type, promotion_id=None, item_id=None, chest_id=None, token=None):
+def start_purchase(user_id, cost, currency_type, promotion_id=None, item_id=None, token=None):
 	try:
 		if user_id is None:
-			logger.error("Attempted to start purchase with null user_id")
 			raise ValueError("user_id cannot be null")
 		if token is None:
-			logger.error("Token is required to start purchase")
 			raise ValueError("token cannot be null")
 
 		transaction = Transaction.objects.create(
 			user_id=user_id,
 			item_id=item_id,
-			chest_id=chest_id,
 			cost=cost,
 			currency_type=currency_type,
 			promotion_id=promotion_id,
-			status='PENDING',
-			token=token
+			status='PENDING'
 		)
+
+		cache.set(f"transaction:{transaction.id}:token", token, timeout=300)
 
 		inventory_data = {
 			'user_id': user_id,
 			'amount': 1,
 			'promotion_id': promotion_id,
-			'currency_type': currency_type
+			'currency_type': currency_type,
+			'item_id': item_id
 		}
-		if item_id:
-			inventory_data['item_id'] = item_id
-		elif chest_id:
-			inventory_data['chest_id'] = chest_id
 
 		auth_command = {
 			'transaction_id': str(transaction.id),
@@ -77,11 +71,15 @@ def start_purchase(user_id, cost, currency_type, promotion_id=None, item_id=None
 		}
 
 		producer = get_producer()
-		producer.produce('shop.balance.reserve.request.auth',
-						 json.dumps(auth_command, ensure_ascii=False).encode('utf-8'))
+		producer.produce(
+			'shop.balance.reserve.request.auth',
+			json.dumps(auth_command, ensure_ascii=False).encode('utf-8')
+		)
+		producer.flush()
+
 		transaction.inventory_data = inventory_data
 		transaction.save()
-		producer.flush()
+
 		logger.info(f"Started purchase transaction: {transaction.id}")
 		return transaction
 
@@ -111,7 +109,7 @@ def handle_authorization_response(message):
 			logger.info(f"Transaction reserved: {transaction.id}")
 
 			try:
-				user_token = transaction.token
+				user_token = cache.get(f"transaction:{transaction.id}:token")
 				if not user_token:
 					raise ValueError("Token not found in transaction")
 
@@ -119,27 +117,18 @@ def handle_authorization_response(message):
 					'Authorization': f'Bearer {user_token}',
 					'Content-Type': 'application/json'
 				}
-				if transaction.item_id:
-					payload = {
-						'item_id': transaction.item_id,
-						'amount': 1
-					}
-				elif transaction.chest_id:
-					from apps.chest.models import Chest
-					chest = Chest.objects.get(id=transaction.chest_id)
-					reward = select_chest_reward(chest)
-					if isinstance(reward, dict) and 'item_id' in reward:
-						payload = {
-							'item_id': reward['item_id'],
-							'amount': 1
-						}
-					else:
-						raise ValueError("Reward does not contain item_id")
-				else:
-					raise ValueError("Transaction must have either item_id or chest_id")
+
+				if not transaction.item_id:
+					raise ValueError("Transaction must have item_id")
+
+				payload = {
+					'item_id': transaction.item_id,
+					'amount': 1
+				}
 
 				with requests.Session() as http_session:
-					response = http_session.patch(f"{INVENTORY_SERVICE_URL}/inventory/add_item",
+					response = http_session.patch(
+						f"{INVENTORY_SERVICE_URL}/inventory/add_item",
 						json=payload,
 						headers=headers,
 						timeout=5
@@ -151,20 +140,20 @@ def handle_authorization_response(message):
 					purchase = create_purchase(
 						owner_id=transaction.user_id,
 						item_id=transaction.item_id,
-						chest_id=transaction.chest_id,
 						promotion_id=transaction.promotion_id,
 						quantity=1
 					)
-					# Metrics
 					gold_spent_total.inc(transaction.cost)
 					successful_purchases_total.inc()
 
-					if transaction.chest_id:
+					if Chest.objects.filter(item_id=transaction.item_id).exists():
 						successful_chest_purchases_total.inc()
-					if transaction.item_id:
+					else:
 						successful_product_purchases_total.inc()
+
 					if transaction.promotion_id is not None:
 						successful_promo_purchases_total.inc()
+
 					logger.info(f"✅ Purchase created after successful transaction: {purchase}")
 				else:
 					raise Exception(f"Inventory error: {response.status_code} - {response.text}")
@@ -192,15 +181,6 @@ def handle_authorization_response(message):
 	except Exception as e:
 		logger.error(f"Error handling auth response: {str(e)}")
 
-
-def select_chest_reward(chest):
-	"""Select a reward based on chest's reward_distribution."""
-	if not chest.reward_distribution:
-		return None
-	choices = list(chest.reward_distribution.items())
-	reward_types = [choice[0] for choice in choices]
-	probabilities = [choice[1] for choice in choices]
-	return random.choices(reward_types, weights=probabilities, k=1)[0]
 
 
 def initiate_compensation(transaction):

@@ -9,12 +9,12 @@ from apps.chest.tasks import (
   handle_guild_war_match_result, 
   handle_guild_war_game_result,
 )
-from kafka.handlers import handle_inventory_update
 from .saga_orchestrator import (
     handle_authorization_response,
     handle_compensation_response,
     handle_promotion_compensation_response
 )
+from ..product.item_consumer import handle_inventory_update
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ KAFKA_TOPICS = [
 
 KAFKA_CONFIG = {
     'bootstrap.servers': settings.KAFKA_BOOTSTRAP_SERVERS,
-    'group.id': 'shop-consumer-group-1',
+    'group.id': 'shop-consumer-group-2',
     'auto.offset.reset': 'earliest',
 }
 

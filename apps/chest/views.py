@@ -1,7 +1,7 @@
 import logging
-
 import jwt
-from rest_framework import generics, status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, status, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -17,22 +17,13 @@ logger = logging.getLogger(__name__)
 
 class ChestListView(generics.ListAPIView):
 	serializer_class = ChestSerializer
+	filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
+	search_fields = ['name', 'description']
+	ordering_fields = ['name', 'created_at']
+	ordering = ['name']
 
 	def get_queryset(self):
 		return Chest.objects.all().prefetch_related('product')
-
-	def list(self, request, *args, **kwargs):
-		cache_key = "chest:public:active"
-		cached_data = cache.get(cache_key)
-
-		if cached_data:
-			return Response(cached_data)
-
-		queryset = self.get_queryset()
-		serializer = self.get_serializer(queryset, many=True)
-		cache.set(cache_key, serializer.data, timeout=60 * 5)  # Cache for 5 minutes
-
-		return Response(serializer.data)
 
 
 class ChestDetailView(generics.RetrieveAPIView):
@@ -55,7 +46,6 @@ class ChestDetailView(generics.RetrieveAPIView):
 
 
 class ChestBuyView(APIView):
-
 	def post(self, request, chest_id):
 		user = request.user
 
@@ -83,7 +73,7 @@ class ChestBuyView(APIView):
 		try:
 			transaction = start_purchase(
 				user_id=user.id,
-				chest_id=chest.id,
+				item_id=chest.item_id,
 				cost=chest.cost,
 				currency_type=chest.currency_type,
 				promotion_id=chest.promotion.id if chest.promotion else None,

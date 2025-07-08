@@ -1,23 +1,19 @@
 from pathlib import Path
-import environ, sys, os
-from celery.schedules import crontab
+import sys, os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-env = environ.Env(DEBUG=(bool, False))
-environ.Env.read_env(BASE_DIR / ".env")
-
-SECRET_KEY = env("SECRET_KEY", default="very-secret-key")
-DEBUG = env.bool("DEBUG", default=False)
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
-
-INVENTORY_SERVICE_URL = os.getenv("INVENTORY_SERVICE_URL", default="http://localhost")
-AUTH_SERVICE_URL = env("AUTH_SERVICE_URL", default="http://localhost")
-GUILD_API_URL = env("GUILD_API_URL", default="http://localhost")
-SERVICE_SECRET_KEY = env("SERVICE_SECRET_KEY", default="your-secret-key-for-inter-service-auth")
+SECRET_KEY = os.getenv("SECRET_KEY", "very-secret-key")
+DEBUG = os.getenv("DEBUG")
+ALLOWED_HOSTS = [os.getenv("ALLOWED_HOSTS")]
+if "127.0.0.1" not in ALLOWED_HOSTS:
+	ALLOWED_HOSTS.append("127.0.0.1")
+INVENTORY_SERVICE_URL = os.getenv("INVENTORY_SERVICE_URL", "http://localhost")
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost")
+GUILD_API_URL = os.getenv("GUILD_API_URL", "http://localhost")
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-KAFKA_CHEST_EVENTS_TOPIC = env("KAFKA_CHEST_EVENTS_TOPIC", default="")
+KAFKA_CHEST_EVENTS_TOPIC = os.getenv("KAFKA_CHEST_EVENTS_TOPIC")
 
 INSTALLED_APPS = [
 	'django.contrib.admin',
@@ -77,25 +73,25 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
 	'default': {
 		'ENGINE': 'django.db.backends.postgresql',
-		'NAME': env('POSTGRES_DB', default='postgres'),
-		'USER': env('POSTGRES_USER', default='postgres'),
-		'PASSWORD': env('POSTGRES_PASSWORD', default='postgres'),
-		'HOST': env('POSTGRES_HOST', default='localhost'),
-		'PORT': env('POSTGRES_PORT', default='5432'),
+		'NAME': os.getenv('POSTGRES_DB', 'postgres'),
+		'USER': os.getenv('POSTGRES_USER', 'postgres'),
+		'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'postgres'),
+		'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+		'PORT': os.getenv('POSTGRES_PORT', '5432'),
 	}
 }
 
 CACHES = {
 	"default": {
 		"BACKEND": "django_redis.cache.RedisCache",
-		"LOCATION": f"redis://{env('REDIS_HOST', default='redis')}:{env('REDIS_PORT', default='6379')}/1",
+		"LOCATION": f"redis://{os.getenv('REDIS_HOST', 'redis')}:{os.getenv('REDIS_PORT', '6379')}/1",
 		"OPTIONS": {
 			"CLIENT_CLASS": "django_redis.client.DefaultClient",
 		}
 	}
 }
 
-CELERY_BROKER_URL = f"redis://{env('REDIS_HOST', default='redis')}:{env('REDIS_PORT', default='6379')}/0"
+CELERY_BROKER_URL = f"redis://{os.getenv('REDIS_HOST', 'redis')}:{os.getenv('REDIS_PORT', '6379')}/0"
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -152,7 +148,6 @@ USE_TZ = True
 
 REST_FRAMEWORK = {
 	'DEFAULT_AUTHENTICATION_CLASSES': [
-		# 'rest_framework_simplejwt.authentication.JWTAuthentication',
 		'config.authentication.GatewayJWTAuthentication',
 
 	],
@@ -162,10 +157,12 @@ REST_FRAMEWORK = {
 	'DEFAULT_THROTTLE_RATES': {
 		'anon': '50/min',
 		'user': '50/min'
-	}
+	},
+	'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+	'PAGE_SIZE': 10,
 }
 
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOW_ALL_ORIGINS = True
 ROOT_URLCONF = 'config.urls'
 
 SWAGGER_SETTINGS = {
@@ -177,5 +174,5 @@ SWAGGER_SETTINGS = {
 			'description': 'Введите JWT токен в формате: Bearer <токен>'
 		}
 	},
-	'USE_SESSION_AUTH': False,  # отключить login/logout в Swagger
+	'USE_SESSION_AUTH': False,
 }

@@ -14,11 +14,13 @@ from ..promotion.services import compensate_promotion
 
 from drf_yasg.utils import swagger_auto_schema
 
+from .utils import create_inventory_item, delete_inventory_item
+
 
 class AdminChestViewSet(viewsets.ModelViewSet):
 	queryset = Chest.objects.all()
 	serializer_class = AdminChestSerializer
-	# permission_classes = [IsAdmin]
+	permission_classes = [IsAdmin]
 
 	@swagger_auto_schema(
 		operation_summary="List all chests",
@@ -31,10 +33,32 @@ class AdminChestViewSet(viewsets.ModelViewSet):
 	@swagger_auto_schema(
 		operation_summary="Create a new chest",
 		operation_description="Create and return a new chest.",
-		responses={201: AdminChestSerializer()}
+		responses={
+			201: AdminChestSerializer(),
+			400: "Bad Request",
+			502: "Inventory Service Error"
+		}
 	)
 	def create(self, request, *args, **kwargs):
-		return super().create(request, *args, **kwargs)
+		serializer = self.get_serializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+
+		try:
+			item_id = create_inventory_item(request, serializer.validated_data)
+			if not item_id:
+				raise ValueError("Inventory service didn't return item ID")
+			serializer.save(item_id=item_id)
+
+			headers = self.get_success_headers(serializer.data)
+			return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+		except Exception as e:
+			return Response(
+				{"error": str(e)},
+				status=status.HTTP_502_BAD_GATEWAY if "Inventory service" in str(e)
+				else status.HTTP_401_UNAUTHORIZED if "credentials" in str(e)
+				else status.HTTP_400_BAD_REQUEST
+			)
 
 	@swagger_auto_schema(
 		operation_summary="Retrieve a chest",
@@ -58,11 +82,23 @@ class AdminChestViewSet(viewsets.ModelViewSet):
 		responses={204: openapi.Response(description='No content')}
 	)
 	def destroy(self, request, *args, **kwargs):
-		return super().destroy(request, *args, **kwargs)
+		instance = self.get_object()
+		item_id = instance.item_id
+
+		try:
+			delete_inventory_item(request, item_id)
+			self.perform_destroy(instance)
+			return Response(status=status.HTTP_204_NO_CONTENT)
+
+		except Exception as e:
+			return Response(
+				{"error": str(e)},
+				status=status.HTTP_502_BAD_GATEWAY
+			)
 
 
 class AdminProductListAPIView(generics.ListAPIView):
-	# permission_classes = [IsAdmin]
+	permission_classes = [IsAdmin]
 	serializer_class = AdminProductSerializer
 	queryset = Product.objects.all()
 
@@ -76,7 +112,7 @@ class AdminProductListAPIView(generics.ListAPIView):
 
 
 class AdminProductAPIView(generics.RetrieveUpdateDestroyAPIView):
-	# permission_classes = [IsAdmin]
+	permission_classes = [IsAdmin]
 	serializer_class = AdminProductSerializer
 	queryset = Product.objects.all()
 	lookup_field = 'pk'
@@ -116,7 +152,7 @@ class AdminPromotionViewSet(viewsets.ModelViewSet):
 	queryset = Promotion.objects.all()
 	serializer_class = AdminPromotionSerializer
 
-	# permission_classes = [IsAdmin]
+	permission_classes = [IsAdmin]
 
 	@swagger_auto_schema(
 		operation_summary="List all promotions",

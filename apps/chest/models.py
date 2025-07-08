@@ -14,6 +14,7 @@ class ChestCurrency(TextChoices):
 
 
 class Chest(models.Model):
+    item_id = models.IntegerField(unique=True, help_text="ID предмета из инвентарной системы")
     gold = models.IntegerField(validators=[MinValueValidator(0)])
     name = models.CharField(max_length=128)
     promotion = models.ForeignKey(
@@ -21,7 +22,6 @@ class Chest(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         related_name="chest_promotion",
-        default=None,
         blank=True
     )
     item_probability = models.IntegerField(validators=[MaxValueValidator(100), MinValueValidator(1)])

@@ -20,21 +20,7 @@ class ItemListView(generics.ListAPIView):
 	ordering = ['name']
 
 	def get_queryset(self):
-		queryset = Product.objects.filter(cost__isnull=False)
-		return queryset
-
-	def list(self, request, *args, **kwargs):
-		cache_key = f"product:public:active:{request.query_params.urlencode()}"
-		cached_data = cache.get(cache_key)
-
-		if cached_data:
-			return Response(cached_data)
-
-		queryset = self.filter_queryset(self.get_queryset())
-		serializer = self.get_serializer(queryset, many=True)
-		cache.set(cache_key, serializer.data, timeout=60 * 5)
-
-		return Response(serializer.data)
+		return Product.objects.filter(cost__isnull=False)
 
 
 class ItemDetailView(generics.RetrieveAPIView):
@@ -79,8 +65,6 @@ class ItemBuyView(APIView):
 				{"error": "Превышен дневной лимит для этого предмета"},
 				status=status.HTTP_400_BAD_REQUEST
 			)
-
-		# Extract the token from the Authorization header
 		auth_header = request.headers.get('Authorization', '')
 		if not auth_header.startswith('Bearer '):
 			return Response(
@@ -88,7 +72,6 @@ class ItemBuyView(APIView):
 				status=status.HTTP_401_UNAUTHORIZED
 			)
 		token = auth_header.split(' ')[1]
-
 		try:
 			transaction = start_purchase(
 				user_id=user.id,
@@ -96,7 +79,7 @@ class ItemBuyView(APIView):
 				cost=product.cost,
 				currency_type=product.currency_type,
 				promotion_id=product.promotion.id if product.promotion else None,
-				token=token  # Pass the token to start_purchase
+				token=token
 			)
 		except Exception as e:
 			return Response(
