@@ -143,6 +143,8 @@ class OpenChestView(APIView):
 		amount = data.get('amount')
 		callback_url = data.get('callback_url')
 
+		chest = get_object_or_404(Chest, item_id=chest_id)
+
 		logger.info("Send task to open_chest_task")
 
 		task = open_chest_task.delay(

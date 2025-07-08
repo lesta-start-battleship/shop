@@ -37,11 +37,17 @@ class AdminChestSerializer(serializers.ModelSerializer):
 		required=False
 	)
 
+	special_products = ProductDetailSerializer(
+		many=True,
+		source='product',  # Используем related_name из модели Chest
+		required=False
+	)
+
 	class Meta:
 		model = Chest
 		fields = [
 			"item_id", "name", "gold", "promotion", "item_probability",
-			"currency_type", "cost", "experience", "products", "product_ids",
+			"currency_type", "cost", "experience", "products", 'product_ids', 'special_products',
 			"daily_purchase_limit", "reward_distribution"
 		]
 		extra_kwargs = {
