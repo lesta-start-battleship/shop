@@ -18,7 +18,7 @@ from drf_yasg.utils import swagger_auto_schema
 class AdminChestViewSet(viewsets.ModelViewSet):
 	queryset = Chest.objects.all()
 	serializer_class = AdminChestSerializer
-	permission_classes = [IsAdmin]
+	# permission_classes = [IsAdmin]
 
 	@swagger_auto_schema(
 		operation_summary="List all chests",
@@ -62,7 +62,7 @@ class AdminChestViewSet(viewsets.ModelViewSet):
 
 
 class AdminProductListAPIView(generics.ListAPIView):
-	permission_classes = [IsAdmin]
+	# permission_classes = [IsAdmin]
 	serializer_class = AdminProductSerializer
 	queryset = Product.objects.all()
 
@@ -76,7 +76,7 @@ class AdminProductListAPIView(generics.ListAPIView):
 
 
 class AdminProductAPIView(generics.RetrieveUpdateDestroyAPIView):
-	permission_classes = [IsAdmin]
+	# permission_classes = [IsAdmin]
 	serializer_class = AdminProductSerializer
 	queryset = Product.objects.all()
 	lookup_field = 'pk'
@@ -116,7 +116,7 @@ class AdminPromotionViewSet(viewsets.ModelViewSet):
 	queryset = Promotion.objects.all()
 	serializer_class = AdminPromotionSerializer
 
-	permission_classes = [IsAdmin]
+	# permission_classes = [IsAdmin]
 
 	@swagger_auto_schema(
 		operation_summary="List all promotions",

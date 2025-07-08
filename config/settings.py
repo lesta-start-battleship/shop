@@ -11,7 +11,7 @@ SECRET_KEY = env("SECRET_KEY", default="very-secret-key")
 DEBUG = env.bool("DEBUG", default=False)
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
 
-INVENTORY_SERVICE_URL = env("INVENTORY_SERVICE_URL", default="http://localhost")
+INVENTORY_SERVICE_URL = os.getenv("INVENTORY_SERVICE_URL", default="http://localhost")
 AUTH_SERVICE_URL = env("AUTH_SERVICE_URL", default="http://localhost")
 GUILD_API_URL = env("GUILD_API_URL", default="http://localhost")
 SERVICE_SECRET_KEY = env("SERVICE_SECRET_KEY", default="your-secret-key-for-inter-service-auth")
@@ -27,6 +27,7 @@ INSTALLED_APPS = [
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
 	'django_celery_beat',
+	'django_filters',
 
 	'rest_framework',
 	'corsheaders',

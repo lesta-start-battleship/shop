@@ -2,6 +2,7 @@ from django.db import models
 
 
 class Product(models.Model):
+	item_id = models.IntegerField(unique=True, help_text="ID предмета из инвентарной системы")
 	name = models.CharField(max_length=255)
 	description = models.TextField()
 	currency_type = models.CharField(max_length=255, blank=True, null=True)
@@ -18,9 +19,11 @@ class Product(models.Model):
 		blank=True,
 		help_text="Максимальное количество покупок в день для этого предмета (null — без лимита)"
 	)
+	script = models.JSONField(blank=True, null=True, help_text="Скрипт действий предмета")
+	kind = models.CharField(max_length=50, blank=True, null=True, help_text="Тип предмета")
 
 	def __str__(self):
-		return self.name
+		return f"{self.name} (ID: {self.item_id})"
 
 	def check_daily_purchase_limit(self, user_id):
 		if self.daily_purchase_limit is None:
@@ -35,7 +38,7 @@ class Product(models.Model):
 
 		purchase_count = Transaction.objects.filter(
 			user_id=user_id,
-			product_id=self.id,
+			item_id=self.item_id,
 			status__in=['PENDING', 'COMPLETED'],
 			created_at__gte=start_of_day,
 			created_at__lt=end_of_day
