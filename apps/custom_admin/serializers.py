@@ -27,7 +27,7 @@ class AdminChestSerializer(serializers.ModelSerializer):
 		model = Chest
 		fields = [
 			"item_id", "name", "gold", "promotion", "item_probability",
-			"currency_type", "cost", "experience", "products", 'special_products',
+			"currency_type", "cost", "experience", "products", 'product_ids', 'special_products',
 			"daily_purchase_limit", "reward_distribution"
 		]
 		extra_kwargs = {
