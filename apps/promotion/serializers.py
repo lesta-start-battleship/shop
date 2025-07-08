@@ -5,6 +5,7 @@ from apps.product.serializers import ItemPromotionSerializer
 
 
 class BasePromotionSerializer(serializers.ModelSerializer):
+    duration = serializers.DurationField(help_text="Format: 'DD HH:MM:SS'")
     items_count = serializers.SerializerMethodField()
     is_active = serializers.SerializerMethodField()
     end_date = serializers.SerializerMethodField()
@@ -16,12 +17,13 @@ class BasePromotionSerializer(serializers.ModelSerializer):
             "name",
             "start_date",
             "end_date",
+            "duration",
             "items_count",
             "is_active"
         ]
 
     def get_items_count(self, obj):
-        return obj.products.count() + obj.chests.count()
+        return obj.products.count() + obj.chest_promotion.count()
 
     def get_is_active(self, obj):
         return obj.is_active()

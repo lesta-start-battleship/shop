@@ -16,7 +16,7 @@ from .permissions import IsAdmin
 from ..product.models import Product
 from ..promotion.models import Promotion
 from ..promotion.services import compensate_promotion
-from ..promotion.serializers import BasePromotionSerializer
+#from ..promotion.serializers import BasePromotionSerializer
 from drf_yasg.utils import swagger_auto_schema
 
 import logging
@@ -212,14 +212,14 @@ class AdminProductAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 class AdminPromotionViewSet(viewsets.ModelViewSet):
 	queryset = Promotion.objects.all()
-	serializer_class = BasePromotionSerializer
+	serializer_class = AdminPromotionSerializer
 
 	permission_classes = [IsAdmin]
 
 	@swagger_auto_schema(
 		operation_summary="List all promotions",
 		operation_description="Returns a list of all promotions available in the system.",
-		responses={200: BasePromotionSerializer(many=True)}
+		responses={200: AdminPromotionSerializer(many=True)}
 	)
 	def list(self, request, *args, **kwargs):
 		return super().list(request, *args, **kwargs)
@@ -227,7 +227,7 @@ class AdminPromotionViewSet(viewsets.ModelViewSet):
 	@swagger_auto_schema(
 		operation_summary="Retrieve a promotion",
 		operation_description="Returns detailed information about a specific promotion by its ID.",
-		responses={200: BasePromotionSerializer}
+		responses={200: AdminPromotionSerializer}
 	)
 	def retrieve(self, request, *args, **kwargs):
 		return super().retrieve(request, *args, **kwargs)
@@ -235,7 +235,7 @@ class AdminPromotionViewSet(viewsets.ModelViewSet):
 	@swagger_auto_schema(
 		operation_summary="Create a new promotion",
 		operation_description="Creates a new promotion with the specified parameters.",
-		responses={201: BasePromotionSerializer}
+		responses={201: AdminPromotionSerializer}
 	)
 	def create(self, request, *args, **kwargs):
 		return super().create(request, *args, **kwargs)
@@ -243,7 +243,7 @@ class AdminPromotionViewSet(viewsets.ModelViewSet):
 	@swagger_auto_schema(
 		operation_summary="Update a promotion",
 		operation_description="Updates the details of an existing promotion.",
-		responses={200: BasePromotionSerializer}
+		responses={200: AdminPromotionSerializer}
 	)
 	def update(self, request, *args, **kwargs):
 		return super().update(request, *args, **kwargs)
