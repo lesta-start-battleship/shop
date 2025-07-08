@@ -5,7 +5,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "very-secret-key")
 DEBUG = os.getenv("DEBUG")
-ALLOWED_HOSTS = "37.9.53.150", "37.9.53.217"
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(',')
 
 INVENTORY_SERVICE_URL = os.getenv("INVENTORY_SERVICE_URL", "http://localhost")
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost")
