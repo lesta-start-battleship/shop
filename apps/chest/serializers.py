@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Chest
+from .models import Chest, ChestSettings
 from apps.product.models import Product
 
 
@@ -38,3 +38,10 @@ class ChestSerializer(serializers.ModelSerializer):
 class ChestOpenSerializer(serializers.Serializer):
 	item_id = serializers.IntegerField(required=True)
 	amount = serializers.IntegerField(required=True)
+
+
+class ChestSettingsSerializer(serializers.ModelSerializer):
+
+	class Meta:
+		model = ChestSettings
+		fields = '__all__'

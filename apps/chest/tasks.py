@@ -7,7 +7,7 @@ from celery import shared_task, group
 from rest_framework.generics import get_object_or_404
 
 from apps.chest.models import Chest
-from apps.chest.utils import open_chest, generate_token, send_guild_war_reward
+from apps.chest.utils import open_chest, generate_token, send_guild_war_reward, get_chest_settings
 from apps.saga.saga_orchestrator import get_producer
 from config import settings
 
@@ -101,7 +101,8 @@ def send_to_user_service(self, result_data, token):
             requests.patch(
                 inventory_response_url,
                 json={
-                    "gold": gold
+                    "gold": gold,
+                    "guild_rage": 0
                 },
                 headers=headers
             )
@@ -170,7 +171,10 @@ def handle_guild_war_match_result(self, event: dict):
     winner_id = event.get("winner_id")
     loser_id = event.get("loser_id")
     match_type = event.get("match_type")
-    guild_war_chest_name = "участник Гильдейской войны"
+
+    chest_settings = get_chest_settings()
+
+    guild_war_chest_name = chest_settings.guild_war_participant_chest
 
     if match_type != "guild_war":
         return
@@ -204,8 +208,10 @@ def handle_guild_war_game_result(self, event: dict):
     loser_id = event.get("loser_id")
     event_type = event.get("match_type")
 
-    guild_war_finish_winner_chest_name = "Гильдейского чемпиона"
-    guild_war_finish_loser_chest_name = "Гильдейского почёта"
+    chest_settings = get_chest_settings()
+
+    guild_war_finish_winner_chest_name = chest_settings.guild_war_winner_chest
+    guild_war_finish_loser_chest_name = chest_settings.guild_war_loser_chest
 
     if event_type != "guild_war":
         return

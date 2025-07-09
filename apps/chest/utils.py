@@ -7,8 +7,7 @@ from collections import defaultdict
 from django.db import close_old_connections
 from config import settings
 
-from apps.chest.models import Chest
-
+from apps.chest.models import Chest, ChestSettings
 
 INVENTORY_API_URL = settings.INVENTORY_SERVICE_URL
 logger = logging.getLogger(__name__)
@@ -16,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 def open_chest(chest: Chest, amount: int):
     logger.info(f"Opening chest {chest.name}")
+
+    chest_settings = get_chest_settings()
 
     amount = int(amount)
 
@@ -28,12 +29,12 @@ def open_chest(chest: Chest, amount: int):
     }
 
     common_products = list(chest.product.all())
-    if chest.name == "Чёрной жемчужины":
+    if chest.name == chest_settings.black_pearl_chest:
         # Get items
         special_products = list(chest.special_products.all())
 
-        deep_converter = next((p for p in special_products if "Глубинный преобразователь" in p.name), None)
-        spies = next((p for p in special_products if "Шпионы Совета Братства" in p.name), None)
+        deep_converter = next((p for p in special_products if chest_settings.davie_johns_product in p.name), None)
+        spies = next((p for p in special_products if chest_settings.spies_product in p.name), None)
         for _ in range(amount):
             exp = 0
             roll = random.randint(1, 100)
@@ -113,3 +114,7 @@ def send_guild_war_reward(user_id: int, item_id: int, amount: int):
                 logger.error(f"Failed to send reward to {user_id}: {str(e)}")
         finally:
             close_old_connections()
+
+
+def get_chest_settings():
+    return ChestSettings.get_solo()
