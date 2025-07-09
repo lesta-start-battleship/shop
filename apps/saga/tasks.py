@@ -22,7 +22,7 @@ KAFKA_TOPICS = [
     'auth.balance.reserve.response.shop',
     'auth.balance.compensate.response.shop',
     'shop.inventory.updates',
-    'stage.game.fact.match-results.v1',
+	'prod.game.fact.match-results.v1',
     'prod.scoreboard.fact.guild-war.1',
     'promotion.compensation.commands'
 ]
@@ -66,7 +66,7 @@ def process_kafka_messages(self):
 					handle_compensation_response(msg)
 				elif topic == 'shop.inventory.updates':
 					handle_inventory_update(data)
-				elif topic == 'stage.game.fact.match-results.v1':
+				elif topic == 'prod.game.fact.match-results.v1':
 					handle_guild_war_match_result.delay(data)
 				elif topic == 'prod.scoreboard.fact.guild-war.1':
 					handle_guild_war_game_result.delay(data)
