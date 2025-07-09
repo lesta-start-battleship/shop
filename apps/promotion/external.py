@@ -1,19 +1,23 @@
 import requests
 from django.conf import settings
+from ..custom_admin.utils import get_inventory_headers
 
 # Inventory Service Wrapper
 class InventoryService:
     
     @staticmethod
-    def get_inventories_with_item(item_id : int):
-        url = f"{settings.INV_SERVICE_URL}/inventory/all_inventory_with_item/{item_id}"
-        response = requests.get(url)
+    def get_inventories_with_item(item_id : int, request=None):
+        url = f"{settings.INVENTORY_SERVICE_URL}/inventory/all_inventory_with_item/"
+        params = {
+            "item_id": item_id
+        }
+        response = requests.get(url, params=params, headers=get_inventory_headers(request))
         response.raise_for_status()
         return response.json()
 
     @staticmethod
     def delete_item(item_id : int):
-        url = f"{settings.INV_SERVICE_URL}/inventory/items/{item_id}"
+        url = f"{settings.INVENTORY_SERVICE_URL}/inventory/items/{item_id}"
         response = requests.delete(url)
         response.raise_for_status()
         return response.json()

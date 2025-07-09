@@ -3,6 +3,7 @@ from apps.chest.models import Chest
 from apps.chest.serializers import ChestSerializer
 from apps.product.models import Product
 from apps.product.serializers import ProductPromotionSerializer
+from apps.promotion.models import Promotion
 from apps.promotion.serializers import BasePromotionSerializer
 
 
@@ -101,8 +102,9 @@ class AdminProductSerializer(serializers.ModelSerializer):
 
 
 class AdminPromotionSerializer(BasePromotionSerializer):
-	chests = ChestSerializer(many=True, read_only=True)
-	products = ProductPromotionSerializer(many=True, read_only=True)
-
-	class Meta(BasePromotionSerializer.Meta):
-		fields = BasePromotionSerializer.Meta.fields + ["chests", "products"]
+    chests = ChestSerializer(many=True, read_only=True)
+    products = ProductPromotionSerializer(many=True, read_only=True)
+    
+    class Meta(BasePromotionSerializer.Meta):
+        model = Promotion
+        fields = BasePromotionSerializer.Meta.fields + ["chests", "products", "description", "manually_disabled"]

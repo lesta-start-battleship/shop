@@ -5,7 +5,7 @@ from apps.saga import saga_orchestrator
 
 from .external import InventoryService
 
-def compensate_promotion(promotion):
+def compensate_promotion(promotion, request):
     if not promotion.has_ended():
         raise ValueError("Promotion is still active.")
     if promotion.compensation_done:
@@ -27,12 +27,15 @@ def compensate_promotion(promotion):
     for chest in chests:
         item_id = chest.item_id
 
-        inventories = InventoryService.get_inventories_with_item(item_id=item_id)
+        inventories = InventoryService.get_inventories_with_item(item_id=item_id, request=request)
 
         for inv in inventories:
             user_id = inv["user_id"]
-            quantity = inv["quantity"]
-            amount = quantity * chest.cost
+            linked_items = inv.get("linked_items", [])
+            
+            for item in linked_items:
+                quantity = item.get("amount", 0)
+                amount = quantity * chest.cost
 
             logger.debug(f"Refunding {amount} gold to user {user_id} for {quantity} unopened chests (ID {item_id})")
             logger.info(f"Initiating async compensation for user {user_id}, amount {amount} gold")

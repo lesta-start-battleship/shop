@@ -278,7 +278,7 @@ class AdminPromotionViewSet(viewsets.ModelViewSet):
 	def compensate(self, request, pk=None):
 		promotion = self.get_object()
 		try:
-			count = compensate_promotion(promotion)
+			count = compensate_promotion(promotion, request)
 		except ValueError as e:
 			return Response({"detail": str(e)}, status=400)
 
