@@ -22,7 +22,7 @@ KAFKA_TOPICS = [
     'auth.balance.reserve.response.shop',
     'auth.balance.compensate.response.shop',
     'shop.inventory.updates',
-	'prod.game.fact.match-results.v1',
+    'prod.game.fact.match-results.v1',
     'prod.scoreboard.fact.guild-war.1',
     'promotion.compensation.commands'
 ]
