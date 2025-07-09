@@ -71,3 +71,17 @@ class Chest(models.Model):
 		).count()
 
 		return purchase_count < self.daily_purchase_limit
+
+
+class ChestSettings(models.Model):
+	guild_war_participant_chest = models.CharField(max_length=128, default="")
+	guild_war_winner_chest = models.CharField(max_length=128, default="")
+	guild_war_loser_chest = models.CharField(max_length=128, default="")
+	black_pearl_chest = models.CharField(max_length=128, default="")
+	davie_johns_product = models.CharField(max_length=128, default="")
+	spies_product = models.CharField(max_length=128, default="")
+
+	@classmethod
+	def get_solo(cls):
+		obj, created = cls.objects.get_or_create(id=1)
+		return obj
