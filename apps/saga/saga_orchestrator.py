@@ -1,9 +1,8 @@
 import json
 import logging
 import requests
-import random
 from django.core.cache import cache
-
+from django.db import transaction
 from config.settings import KAFKA_BOOTSTRAP_SERVERS, INVENTORY_SERVICE_URL
 from .models import Transaction
 from apps.promotion.external import InventoryService
@@ -16,7 +15,7 @@ from prometheus_metrics import (
 	failed_purchases_total,
 	successful_promo_purchases_total,
 )
-from ..chest.models import Chest
+
 
 
 def safe_json_decode(msg):
@@ -41,17 +40,6 @@ def start_purchase(user_id, cost, currency_type, promotion_id=None, item_id=None
 		if token is None:
 			raise ValueError("token cannot be null")
 
-		transaction = Transaction.objects.create(
-			user_id=user_id,
-			item_id=item_id,
-			cost=cost,
-			currency_type=currency_type,
-			promotion_id=promotion_id,
-			status='PENDING'
-		)
-
-		cache.set(f"transaction:{transaction.id}:token", token, timeout=300)
-
 		inventory_data = {
 			'user_id': user_id,
 			'amount': 1,
@@ -60,8 +48,20 @@ def start_purchase(user_id, cost, currency_type, promotion_id=None, item_id=None
 			'item_id': item_id
 		}
 
+		txn = Transaction.objects.create(
+			user_id=user_id,
+			item_id=item_id,
+			cost=cost,
+			currency_type=currency_type,
+			promotion_id=promotion_id,
+			status='PENDING',
+			inventory_data=inventory_data
+		)
+
+		cache.set(f"transaction:{txn.id}:token", token, timeout=300)
+
 		auth_command = {
-			'transaction_id': str(transaction.id),
+			'transaction_id': str(txn.id),
 			'user_id': user_id,
 			'cost': cost,
 			'currency_type': currency_type,
@@ -74,11 +74,11 @@ def start_purchase(user_id, cost, currency_type, promotion_id=None, item_id=None
 		)
 		producer.flush()
 
-		transaction.inventory_data = inventory_data
-		transaction.save()
+		txn.inventory_data = inventory_data
+		txn.save()
 
-		logger.info(f"Started purchase transaction: {transaction.id}")
-		return transaction
+		logger.info(f"Started purchase transaction: {txn.id}")
+		return txn
 
 	except Exception as e:
 		logger.error(f"Error starting purchase: {str(e)}")
@@ -95,18 +95,22 @@ def handle_authorization_response(message):
 		logger.info(f"Received auth response: {data}")
 
 		try:
-			transaction = Transaction.objects.get(id=data['transaction_id'])
+			with transaction.atomic():
+				txn = Transaction.objects.select_for_update().get(id=data['transaction_id'])
+				if txn.status != 'PENDING':
+					logger.warning(f"Transaction {txn.id} is not in PENDING state")
+					return
 		except (KeyError, ValueError, Transaction.DoesNotExist) as e:
 			logger.error(f"Invalid transaction data: {str(e)}")
 			return
 
 		if data.get('success') is True:
-			transaction.status = 'RESERVED'
-			transaction.save()
-			logger.info(f"Transaction reserved: {transaction.id}")
+			txn.status = 'RESERVED'
+			txn.save()
+			logger.info(f"Transaction reserved: {txn.id}")
 
 			try:
-				user_token = cache.get(f"transaction:{transaction.id}:token")
+				user_token = cache.get(f"transaction:{txn.id}:token")
 				if not user_token:
 					raise ValueError("Token not found in transaction")
 
@@ -115,14 +119,13 @@ def handle_authorization_response(message):
 					'Content-Type': 'application/json'
 				}
 
-				if not transaction.item_id:
+				if not txn.item_id:
 					raise ValueError("Transaction must have item_id")
 
 				payload = {
-					'item_id': transaction.item_id,
-					'amount': 1
+					'item_id': txn.item_id,
+					'amount': 1,
 				}
-				logger.info(f"Transaction started. Token {user_token}")
 				with requests.Session() as http_session:
 					response = http_session.patch(
 						f"{INVENTORY_SERVICE_URL}/inventory/add_item",
@@ -130,56 +133,49 @@ def handle_authorization_response(message):
 						headers=headers,
 						timeout=5
 					)
-				logger.info(response)	
+				logger.info(response)
 				if response.status_code == 200:
-					transaction.status = 'COMPLETED'
-					logger.info(f"Transaction completed: {transaction.id}")
+					txn.status = 'COMPLETED'
+					logger.info(f"Transaction completed: {txn.id}")
 					purchase = create_purchase(
-						owner_id=transaction.user_id,
-						item_id=transaction.item_id,
-						promotion_id=transaction.promotion_id,
+						owner_id=txn.user_id,
+						item_id=txn.item_id,
+						promotion_id=txn.promotion_id,
 						quantity=1
 					)
-					gold_spent_total.inc(transaction.cost)
+					gold_spent_total.inc(txn.cost)
 					successful_purchases_total.inc()
-					if transaction.promotion_id is not None:
+					if txn.promotion_id is not None:
 						successful_promo_purchases_total.inc()
-
-					logger.info(f"✅ Purchase created after successful transaction {purchase}")
+					logger.info(f"✅ Purchase created: {purchase}")
 				else:
 					raise Exception(f"Inventory error: {response.status_code} - {response.text}")
 
 			except Exception as e:
 				logger.error(f"Error calling inventory service: {str(e)}")
-				transaction.status = 'FAILED'
+				txn.status = 'FAILED'
 				failed_purchases_total.inc()
-				transaction.error_message = str(e)
-				initiate_compensation(transaction)
+				txn.error_message = str(e)
+				initiate_compensation(txn)
 
-			transaction.save()
+			txn.save()
 		else:
 			error_code = data.get('error_message')
-			transaction.status = 'FAILED'
-			transaction.error_message = error_code,
-			transaction.save()
-
-			logger.warning(
-				f"Authorization failed for transaction {transaction.id}. "
-				f"Reason: {transaction.error_message}. "
-				f"Error code: {error_code}"
-			)
+			txn.status = 'FAILED'
+			txn.error_message = error_code
+			txn.save()
+			logger.warning(f"Authorization failed: {txn.id}. Reason: {error_code}")
 
 	except Exception as e:
 		logger.error(f"Error handling auth response: {str(e)}")
 
 
-
-def initiate_compensation(transaction):
+def initiate_compensation(txn):
 	compensate_command = {
-		'transaction_id': str(transaction.id),
-		'user_id': transaction.user_id,
-		'cost': transaction.cost,
-		'currency_type': transaction.currency_type
+		'transaction_id': str(txn.id),
+		'user_id': txn.user_id,
+		'cost': txn.cost,
+		'currency_type': txn.currency_type
 	}
 
 	try:
@@ -190,14 +186,14 @@ def initiate_compensation(transaction):
 		)
 		producer.flush()
 
-		transaction.status = 'COMPENSATING'
-		transaction.save()
-		logger.info(f"Compensation initiated for transaction: {transaction.id}")
+		txn.status = 'COMPENSATING'
+		txn.save()
+		logger.info(f"Compensation initiated for transaction: {txn.id}")
 	except Exception as e:
 		logger.error(f"Failed to initiate compensation: {str(e)}")
-		transaction.status = 'COMPENSATION_FAILED'
-		transaction.error_message = f"Compensation failed: {str(e)}"
-		transaction.save()
+		txn.status = 'COMPENSATION_FAILED'
+		txn.error_message = f"Compensation failed: {str(e)}"
+		txn.save()
 
 
 def handle_compensation_response(message):
@@ -210,20 +206,20 @@ def handle_compensation_response(message):
 		logger.info(f"Processing compensation response: {data}")
 
 		try:
-			transaction = Transaction.objects.get(id=data['transaction_id'])
+			txn = Transaction.objects.get(id=data['transaction_id'])
 		except (KeyError, ValueError, Transaction.DoesNotExist) as e:
 			logger.error(f"Invalid transaction in compensation: {str(e)}")
 			return
 
 		if data.get('success') is True:
-			transaction.status = 'COMPENSATED'
-			logger.info(f"Transaction compensated: {transaction.id}")
+			txn.status = 'COMPENSATED'
+			logger.info(f"Transaction compensated: {txn.id}")
 		else:
-			transaction.status = 'COMPENSATION_FAILED'
-			transaction.error_message = data.get('message', 'Compensation failed')
-			logger.error(f"Compensation failed for transaction: {transaction.id}")
+			txn.status = 'COMPENSATION_FAILED'
+			txn.error_message = data.get('message', 'Compensation failed')
+			logger.error(f"Compensation failed for transaction: {txn.id}")
 
-		transaction.save()
+		txn.save()
 
 	except Exception as e:
 		logger.error(f"Error processing compensation: {str(e)}", exc_info=True)

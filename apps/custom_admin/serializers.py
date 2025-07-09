@@ -6,25 +6,30 @@ from apps.product.serializers import ItemPromotionSerializer
 from apps.promotion.serializers import BasePromotionSerializer
 
 
-
 class ProductDetailSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Product
-		fields = ['id', 'name', 'description']  # Полные данные для чтения
+		fields = ['item_id', 'name', 'description']
 
 
 class ProductIdSerializer(serializers.PrimaryKeyRelatedField):
+	def get_queryset(self):
+		return Product.objects.all()
+
 	def to_internal_value(self, data):
-		# Принимаем только ID продукта
-		return super().to_internal_value(data)
+		try:
+			product = Product.objects.get(item_id=data)
+			return super().to_internal_value(product.id)
+		except Product.DoesNotExist:
+			raise serializers.ValidationError(f"Product with item_id={data} does not exist")
+		except (TypeError, ValueError):
+			raise serializers.ValidationError("Incorrect type. Expected item_id value.")
 
 	def to_representation(self, value):
-		# При отображении используем полный сериализатор
 		return ProductDetailSerializer(value, context=self.context).data
 
 
 class AdminChestSerializer(serializers.ModelSerializer):
-	# Для GET запросов - полные данные
 	products = ProductDetailSerializer(
 		many=True,
 		source='product',
@@ -36,9 +41,7 @@ class AdminChestSerializer(serializers.ModelSerializer):
 		read_only=True
 	)
 
-	# Для записи - только ID продуктов
 	product_ids = ProductIdSerializer(
-		queryset=Product.objects.all(),
 		many=True,
 		write_only=True,
 		source='product',
@@ -46,7 +49,6 @@ class AdminChestSerializer(serializers.ModelSerializer):
 	)
 
 	special_products_ids = ProductIdSerializer(
-		queryset=Product.objects.all(),
 		many=True,
 		write_only=True,
 		source='special_products',
@@ -57,26 +59,26 @@ class AdminChestSerializer(serializers.ModelSerializer):
 		model = Chest
 		fields = [
 			"item_id", "name", "gold", "promotion", "item_probability",
-			"currency_type", "cost", "experience", "products", 'product_ids', 'special_products', 'special_products_ids',
+			"currency_type", "cost", "experience", "products", 'product_ids', 'special_products',
+			'special_products_ids',
 			"daily_purchase_limit", "reward_distribution"
 		]
 		extra_kwargs = {
 			'item_id': {'read_only': True}
 		}
 
-	def create(self, validated_data):
-		# Обрабатываем продукты (уже как ID через product_ids)
-		products = validated_data.pop('product', [])
-		special_products = validated_data.pop('special_products', [])
+		def create(self, validated_data):
+			products = validated_data.pop('product', [])
+			special_products = validated_data.pop('special_products', [])
 
-		chest = Chest.objects.create(**validated_data)
+			chest = Chest.objects.create(**validated_data)
 
-		if products:
-			chest.product.set(products)
-		if special_products:
-			chest.special_products.set(special_products)
+			if products:
+				chest.product.set(products)
+			if special_products:
+				chest.special_products.set(special_products)
 
-		return chest
+			return chest
 
 
 class AdminProductSerializer(serializers.ModelSerializer):
@@ -99,8 +101,8 @@ class AdminProductSerializer(serializers.ModelSerializer):
 
 
 class AdminPromotionSerializer(BasePromotionSerializer):
-    chests = ChestSerializer(many=True, read_only=True)
-    products = ItemPromotionSerializer(many=True, read_only=True)
-    
-    class Meta(BasePromotionSerializer.Meta):
-        fields = BasePromotionSerializer.Meta.fields + ["chests", "products"]
+	chests = ChestSerializer(many=True, read_only=True)
+	products = ItemPromotionSerializer(many=True, read_only=True)
+
+	class Meta(BasePromotionSerializer.Meta):
+		fields = BasePromotionSerializer.Meta.fields + ["chests", "products"]

@@ -20,7 +20,7 @@ class ItemListView(generics.ListAPIView):
 	ordering = ['name']
 
 	def get_queryset(self):
-		return Product.objects.filter(cost__isnull=False)
+		return Product.objects.filter(cost__isnull=False, currency_type__isnull=False)
 
 
 class ItemDetailView(generics.RetrieveAPIView):
@@ -29,7 +29,7 @@ class ItemDetailView(generics.RetrieveAPIView):
 	lookup_url_kwarg = 'item_id'
 
 	def get_queryset(self):
-		return Product.objects.filter(cost__isnull=False)
+		return Product.objects.filter(cost__isnull=False, currency_type__isnull=False)
 
 	def retrieve(self, request, *args, **kwargs):
 		item_id = kwargs.get("item_id")
@@ -40,7 +40,7 @@ class ItemDetailView(generics.RetrieveAPIView):
 			return Response(cached_data)
 
 		response = super().retrieve(request, *args, **kwargs)
-		cache.set(cache_key, response.data, timeout=60 * 10)
+		cache.set(cache_key, response.data, timeout=30)
 
 		return response
 
@@ -56,7 +56,7 @@ class ItemBuyView(APIView):
 			)
 
 		product = get_object_or_404(
-			Product.objects.filter(cost__isnull=False),
+			Product.objects.filter(cost__isnull=False, currency_type__isnull=False),
 			item_id=item_id
 		)
 

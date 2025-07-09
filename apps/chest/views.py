@@ -45,7 +45,7 @@ class ChestDetailView(generics.RetrieveAPIView):
 			return Response(cached_data)
 
 		response = super().retrieve(request, *args, **kwargs)
-		cache.set(cache_key, response.data, timeout=60 * 10)
+		cache.set(cache_key, response.data, timeout=30)
 
 		return response
 

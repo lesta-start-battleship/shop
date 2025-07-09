@@ -36,10 +36,6 @@ KAFKA_CONFIG = {
 
 @shared_task(bind=True)
 def process_kafka_messages(self):
-
-	"""
-	Celery-задача для бесконечного Kafka-консьюмера.
-	"""
 	logger.info("[KafkaTask] Запуск Kafka consumer из Celery задачи...")
 
 	consumer = Consumer(KAFKA_CONFIG)

@@ -3,7 +3,7 @@ from django.conf import settings
 from django.http import Http404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg import openapi
-from rest_framework import viewsets, generics, status
+from rest_framework import viewsets, generics, status, filters
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -16,7 +16,7 @@ from .permissions import IsAdmin
 from ..product.models import Product
 from ..promotion.models import Promotion
 from ..promotion.services import compensate_promotion
-#from ..promotion.serializers import BasePromotionSerializer
+# from ..promotion.serializers import BasePromotionSerializer
 from drf_yasg.utils import swagger_auto_schema
 
 import logging
@@ -29,8 +29,10 @@ class AdminChestViewSet(viewsets.ModelViewSet):
 	serializer_class = AdminChestSerializer
 	permission_classes = [IsAdmin]
 	lookup_field = 'item_id'
-	filter_backends = [DjangoFilterBackend]
-	filterset_fields = ['item_id', 'name']
+	filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
+	search_fields = ['name']
+	ordering_fields = ['name', 'created_at', 'cost', 'item_id']
+	ordering = ['item_id']
 
 	@swagger_auto_schema(
 		operation_summary="List all chests",
@@ -160,9 +162,10 @@ class AdminProductListAPIView(generics.ListAPIView):
 	queryset = Product.objects.all()
 	serializer_class = AdminProductSerializer
 	permission_classes = [IsAdmin]
-	lookup_field = 'item_id'
-	filter_backends = [DjangoFilterBackend]
-	filterset_fields = ['item_id', 'name']
+	filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
+	search_fields = ['name']
+	ordering_fields = ['name', 'created_at', 'cost', 'item_id']
+	ordering = ['item_id']
 
 	@swagger_auto_schema(
 		operation_summary="List all products",
