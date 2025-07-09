@@ -2,7 +2,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+
 
 from django.utils.timezone import now
 from django.core.cache import cache
@@ -19,7 +19,7 @@ from .serializers import PublicPromotionSerializer
 
 class PublicPromotionListView(ListAPIView):
     serializer_class = PublicPromotionSerializer
-    permission_classes = [IsAuthenticated]  # Or IsAuthenticated if needed
+
 
     def get_queryset(self):
         return Promotion.objects.annotate(

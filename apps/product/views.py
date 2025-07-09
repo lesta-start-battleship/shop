@@ -16,8 +16,8 @@ class ItemListView(generics.ListAPIView):
 	filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
 	search_fields = ['name', 'description', 'kind']
 	filterset_fields = ['currency_type', 'kind']
-	ordering_fields = ['cost', 'name']
-	ordering = ['name']
+	ordering_fields = ['cost', 'item_id']
+	ordering = ['item_id']
 
 	def get_queryset(self):
 		return Product.objects.filter(cost__isnull=False, currency_type__isnull=False)

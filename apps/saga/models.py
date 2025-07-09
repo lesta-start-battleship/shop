@@ -5,6 +5,7 @@ from django.db import models
 class Transaction(models.Model):
 	STATUS_CHOICES = [
 		('pending', 'Pending'),
+		('reserved', 'RESERVED'),
 		('completed', 'Completed'),
 		('compensating', 'Compensating'),
 		('compensated', 'Compensated'),

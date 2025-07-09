@@ -58,7 +58,7 @@ def start_purchase(user_id, cost, currency_type, promotion_id=None, item_id=None
 			inventory_data=inventory_data
 		)
 
-		cache.set(f"transaction:{txn.id}:token", token, timeout=300)
+		cache.set(f"transaction:{txn.id}:token", token, timeout=30)
 
 		auth_command = {
 			'transaction_id': str(txn.id),
