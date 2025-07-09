@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Promotion
 from apps.chest.serializers import ChestSerializer
-from apps.product.serializers import ItemPromotionSerializer
+from apps.product.serializers import ProductPromotionSerializer
 
 
 class BasePromotionSerializer(serializers.ModelSerializer):
@@ -34,7 +34,7 @@ class BasePromotionSerializer(serializers.ModelSerializer):
 
 class PublicPromotionSerializer(BasePromotionSerializer):
     chests = ChestSerializer(many=True, read_only=True)
-    products = ItemPromotionSerializer(many=True, read_only=True)
+    products = ProductPromotionSerializer(many=True, read_only=True)
     
     class Meta(BasePromotionSerializer.Meta):
         fields = BasePromotionSerializer.Meta.fields + ["chests", "products"]

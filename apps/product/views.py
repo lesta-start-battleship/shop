@@ -7,12 +7,12 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.product.models import Product
-from apps.product.serializers import ItemSerializer
+from apps.product.serializers import ProductSerializer
 from apps.saga.saga_orchestrator import start_purchase
 
 
-class ItemListView(generics.ListAPIView):
-	serializer_class = ItemSerializer
+class ProductListView(generics.ListAPIView):
+	serializer_class = ProductSerializer
 	filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
 	search_fields = ['name', 'description', 'kind']
 	filterset_fields = ['currency_type', 'kind']
@@ -23,8 +23,8 @@ class ItemListView(generics.ListAPIView):
 		return Product.objects.filter(cost__isnull=False, currency_type__isnull=False)
 
 
-class ItemDetailView(generics.RetrieveAPIView):
-	serializer_class = ItemSerializer
+class ProductDetailView(generics.RetrieveAPIView):
+	serializer_class = ProductSerializer
 	lookup_field = 'item_id'
 	lookup_url_kwarg = 'item_id'
 
@@ -45,7 +45,7 @@ class ItemDetailView(generics.RetrieveAPIView):
 		return response
 
 
-class ItemBuyView(APIView):
+class ProductBuyView(APIView):
 	def post(self, request, item_id):
 		user = request.user
 

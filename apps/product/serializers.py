@@ -4,14 +4,14 @@ from apps.chest.models import Chest
 from apps.promotion.models import Promotion
 
 
-class ItemPromotionSerializer(serializers.ModelSerializer):
+class ProductPromotionSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Promotion
 		fields = ['id', 'name']
 
 
-class ItemSerializer(serializers.ModelSerializer):
-	promotion = ItemPromotionSerializer(read_only=True)
+class ProductSerializer(serializers.ModelSerializer):
+	promotion = ProductPromotionSerializer(read_only=True)
 
 	class Meta:
 		model = Product
@@ -21,5 +21,6 @@ class ItemSerializer(serializers.ModelSerializer):
 			'description',
 			'currency_type',
 			'cost',
-			'promotion'
+			'promotion',
+			'daily_purchase_limit'
 		]

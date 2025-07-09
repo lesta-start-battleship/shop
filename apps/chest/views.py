@@ -28,9 +28,6 @@ class ChestListView(generics.ListAPIView):
 		return Chest.objects.all().prefetch_related('product')
 
 
-
-
-
 class ChestDetailView(generics.RetrieveAPIView):
 	queryset = Chest.objects.all()
 	serializer_class = ChestSerializer

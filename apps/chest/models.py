@@ -55,7 +55,7 @@ class Chest(models.Model):
 		if self.daily_purchase_limit is None:
 			return True
 
-		from datetime import datetime, timedelta
+		from datetime import timedelta
 		from django.utils import timezone
 		from apps.saga.models import Transaction
 

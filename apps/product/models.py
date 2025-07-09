@@ -1,5 +1,7 @@
 from django.db import models
 
+from apps.promotion.models import Promotion
+
 
 class Product(models.Model):
 	item_id = models.IntegerField(unique=True, help_text="ID предмета из инвентарной системы")
@@ -7,8 +9,7 @@ class Product(models.Model):
 	description = models.TextField()
 	currency_type = models.CharField(max_length=255, blank=True, null=True)
 	cost = models.IntegerField(blank=True, null=True)
-	promotion = models.ForeignKey(
-		"promotion.Promotion",
+	promotion = models.ForeignKey(Promotion,
 		on_delete=models.SET_NULL,
 		blank=True,
 		null=True,
