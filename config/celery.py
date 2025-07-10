@@ -1,5 +1,6 @@
 import os, logging
 from celery import Celery
+from celery.schedules import crontab
 from celery.signals import worker_ready
 
 logger = logging.getLogger(__name__)
@@ -8,6 +9,15 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 app = Celery('config')
 app.config_from_object('django.conf:settings', namespace='CELERY')
+
+
+app.conf.beat_schedule = {
+    'recover-stuck-distributions-every-5-minutes': {
+        'task': 'apps.chest.tasks.recover_stuck_distribution',
+        'schedule': crontab(minute='*/5'),
+    },
+}
+
 app.autodiscover_tasks()
 
 

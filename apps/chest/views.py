@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from rest_framework.reverse import reverse
-from .models import Chest, ChestSettings
+from .models import Chest, ChestSettings, ChestOpeningDistribution
 from .serializers import ChestSerializer, ChestOpenSerializer, ChestSettingsSerializer
 from apps.saga.saga_orchestrator import start_purchase
 from apps.chest.tasks import open_chest_task
@@ -143,20 +143,39 @@ class OpenChestView(APIView):
 
         chest = get_object_or_404(Chest, item_id=chest_id)
 
+        distribution: ChestOpeningDistribution = ChestOpeningDistribution.objects.create(
+            user_id=user_id,
+            chest_id=chest_id,
+            amount=amount,
+            token=token,
+            status='pending'
+        )
+
         logger.info("Send task to open_chest_task")
 
-        task = open_chest_task.delay(
-            chest_id=chest_id,
-            token=token,
-            user_id=user_id,
-            callback_url=callback_url,
-            amount=amount
-        )
+        task = open_chest_task.delay(distribution.id)
 
         return Response(
-            {"task_id": task.id},
+            {"distribution_id": distribution.id},
             status=status.HTTP_202_ACCEPTED
         )
+
+
+class DistributionStatusView(APIView):
+    def get(self, request, distribution_id):
+        try:
+            distribution = ChestOpeningDistribution.objects.get(id=distribution_id)
+            return Response({
+                "status": distribution.status,
+                "created_at": distribution.created_at,
+                "updated_at": distribution.updated_at,
+                "retry": distribution.retry
+            })
+        except ChestOpeningDistribution.DoesNotExist:
+            return Response(
+                {"error": "Distribution not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class ChestSettingsView(APIView):

@@ -85,3 +85,26 @@ class ChestSettings(models.Model):
 	def get_solo(cls):
 		obj, created = cls.objects.get_or_create(id=1)
 		return obj
+
+
+class ChestOpeningDistribution(models.Model):
+	STATUS_CHOICES = [
+		('pending', 'Pending'),
+		('chest_used', 'ChestUsed'),
+		('rewards_generated', 'RewardsGenerated'),
+		('items_sent', 'ItemsSent'),
+		('gold_sent', 'GoldSent'),
+		('scoreboard_sent', 'ScoreboardSent'),
+		('completed', 'Completed'),
+		('failed', 'Failed'),
+	]
+
+	user_id = models.IntegerField()
+	chest_id = models.IntegerField()
+	amount = models.IntegerField()
+	token = models.TextField()
+	status = models.CharField(max_length=32, choices=STATUS_CHOICES, default='pending')
+	rewards = models.JSONField(null=True, blank=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+	retry = models.IntegerField(default=0)
