@@ -200,7 +200,7 @@ def recover_stuck_distribution():
 
     failed_distributions = ChestOpeningDistribution.objects.filter(
         status='failed',
-        retry_count__lt=3
+        retry__lt=3
     )
 
     for distribution in failed_distributions:
